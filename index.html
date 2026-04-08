@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Color of Work — State Labor Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0a;
+    --white: #f5f0e8;
+    --cream: #ede8dc;
+    --red: #c8341a;
+    --gold: #d4a843;
+    --green: #2d6a4f;
+    --muted: #7a7268;
+    --border: rgba(10,10,10,0.12);
+    --state-1: #c8341a;
+    --state-2: #2d6a4f;
+    --state-3: #d4a843;
+    --state-4: #4a6fa5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--white);
+    color: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--black);
+    color: var(--white);
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 4px solid var(--red);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: var(--white);
+  }
+
+  .header-left .subtitle {
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-top: 0.3rem;
+    font-weight: 500;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .refresh-btn {
+    background: transparent;
+    border: 1px solid rgba(245,240,232,0.2);
+    color: var(--white);
+    padding: 0.5rem 1rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover {
+    background: var(--red);
+    border-color: var(--red);
+  }
+
+  /* TABS */
+  .tab-bar {
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 3rem;
+    gap: 0;
+  }
+
+  .tab {
+    padding: 1rem 1.8rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .tab:hover { color: var(--black); }
+  .tab.active {
+    color: var(--black);
+    border-bottom-color: var(--red);
+  }
+
+  /* LOADING / ERROR */
+  .loading-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--red);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* MAIN CONTENT */
+  .main {
+    padding: 2.5rem 3rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* STATE LEGEND */
+  .state-legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .state-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    background: var(--black);
+    color: var(--white);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .state-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .no-data-pill {
+    background: var(--cream);
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .section-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--red);
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.04em;
+  }
+
+  .section-desc {
+    font-size: 0.84rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+  /* STAT CARDS */
+  .stat-card {
+    background: var(--black);
+    color: var(--white);
+    padding: 1.5rem;
+  }
+
+  .stat-card .label {
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .stat-card .value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+
+  .stat-card .state-tag {
+    font-size: 0.72rem;
+    margin-top: 0.4rem;
+    color: var(--gold);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* CHART PANELS */
+  .chart-panel {
+    background: white;
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+  }
+
+  .chart-panel .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem;
+  }
+
+  .chart-panel .panel-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+    line-height: 1.4;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 280px;
+  }
+
+  .chart-wrap.tall { height: 360px; }
+
+  /* INDUSTRY TABLES */
+  .industry-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .industry-table th {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid var(--black);
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .industry-table td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.84rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .industry-table tr:last-child td { border-bottom: none; }
+
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: var(--black);
+    color: var(--white);
+    font-size: 0.65rem;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .wage-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  /* STATE TABS FOR INDUSTRY */
+  .state-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .state-tab-btn {
+    padding: 0.35rem 0.9rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: var(--cream);
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .state-tab-btn.active {
+    background: var(--black);
+    color: var(--white);
+  }
+
+  /* GAP BARS */
+  .gap-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .gap-bar-label {
+    width: 90px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .gap-bar-track {
+    flex: 1;
+    height: 24px;
+    background: var(--cream);
+    position: relative;
+  }
+
+  .gap-bar-fill {
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    transition: width 0.8s ease;
+  }
+
+  .gap-bar-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    width: 55px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* SECTION SPACING */
+  .section { margin-bottom: 3rem; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    font-size: 0.84rem;
+    border: 1px dashed var(--border);
+  }
+
+  .empty-state .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    header { flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem; }
+    .tab-bar { padding: 0 1.5rem; overflow-x: auto; }
+    .main { padding: 1.5rem; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+  }
+
+  .highlight-box {
+    background: var(--black);
+    color: var(--white);
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .highlight-box .hl-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .highlight-box .hl-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--gold);
+  }
+
+  .col-gender {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .gender-block {
+    padding: 1rem;
+    background: var(--cream);
+  }
+
+  .gender-block .g-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>The Color of Work</h1>
+    <div class="subtitle">Black Labor Market Dashboard · Ripple Effect Project</div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      Live from Airtable
+    </div>
+    <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('unemployment', this)">Unemployment Gaps</div>
+  <div class="tab" onclick="switchTab('wages', this)">Wage Landscape</div>
+  <div class="tab" onclick="switchTab('industry', this)">Industry Concentration</div>
+</div>
+
+<div class="main">
+  <div id="loading" class="loading-screen">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading state data...</div>
+  </div>
+
+  <div id="content" style="display:none">
+
+    <!-- STATE LEGEND -->
+    <div class="state-legend" id="stateLegend"></div>
+
+    <!-- TAB: UNEMPLOYMENT -->
+    <div class="tab-panel active" id="tab-unemployment">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-label">01 — Unemployment</div>
+          <div class="section-title">Who Bears the Burden?</div>
+          <div class="section-desc">Black workers consistently face higher unemployment than the overall population. This tab surfaces how large that gap is across states, and how it differs by gender.</div>
+        </div>
+
+        <div class="grid-4" id="unempStatCards" style="margin-bottom:1.5rem"></div>
+
+        <div class="grid-2">
+          <div class="chart-panel">
+            <div class="panel-title">Black vs. Overall Unemployment Rate</div>
+            <div class="panel-desc">Grouped by state. Shows the racial unemployment gap — how much higher Black unemployment is than the state average.</div>
+            <div class="chart-wrap">
+              <canvas id="unempCompareChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-panel">
+            <div class="panel-title">Black Unemployment by Gender</div>
+            <div class="panel-desc">Black men vs. Black women unemployment across states. Intersectional patterns often differ from the overall gap.</div>
+            <div class="chart-wrap">
+              <canvas id="unempGenderChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section-header">
+          <div class="section-label">Gap Analysis</div>
+          <div class="section-title">Racial Unemployment Gap by State</div>
+          <div class="section-desc">How many percentage points higher is Black unemployment compared to overall unemployment? Larger bars = larger disparity.</div>
+        </div>
+        <div class="chart-panel">
+          <div class="chart-wrap">
+            <canvas id="unempGapChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: WAGES -->
+    <div class="tab-panel" id="tab-wages">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-label">02 — Wages</div>
+          <div class="section-title">What Does Work Pay?</div>
+          <div class="section-desc">Median wages for Black workers compared to all workers, disaggregated by gender. Reveals both the racial wage gap and how minimum wage policy sits relative to actual earnings.</div>
+        </div>
+
+        <div class="grid-4" id="wageStatCards" style="margin-bottom:1.5rem"></div>
+
+        <div class="grid-2" style="margin-bottom:1.5rem">
+          <div class="chart-panel">
+            <div class="panel-title">Median Wage: Black vs. All Workers</div>
+            <div class="panel-desc">Annual median wages compared across states. Bars show the earnings gap between Black workers and all workers.</div>
+            <div class="chart-wrap">
+              <canvas id="wageCompareChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-panel">
+            <div class="panel-title">Black Worker Wages by Gender</div>
+            <div class="panel-desc">Black men vs. Black women median wages across states. The gender wage gap within the Black workforce.</div>
+            <div class="chart-wrap">
+              <canvas id="wageGenderChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-panel">
+          <div class="panel-title">Wage Gap Ratio — Black Workers vs. All Workers</div>
+          <div class="panel-desc">Expressed as cents on the dollar. A ratio of 0.78 means Black workers earn 78¢ for every $1 earned by all workers. Lower = larger disparity.</div>
+          <div class="chart-wrap">
+            <canvas id="wageRatioChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: INDUSTRY -->
+    <div class="tab-panel" id="tab-industry">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-label">03 — Industry</div>
+          <div class="section-title">Where Do Black Workers Work?</div>
+          <div class="section-desc">Which industries concentrate Black workers? Compare overall employment patterns vs. where Black workers are specifically concentrated — and whether those industries pay well.</div>
+        </div>
+
+        <div class="state-tabs" id="industryStateTabs"></div>
+
+        <div class="grid-2" id="industryContent">
+          <div class="chart-panel">
+            <div class="panel-title">Top 5 Industries — Overall Employment</div>
+            <div class="panel-desc">Largest industries by total workers in this state.</div>
+            <div id="overallIndustryTable"></div>
+          </div>
+          <div class="chart-panel">
+            <div class="panel-title">Top 5 Industries — Black Worker Concentration</div>
+            <div class="panel-desc">Industries employing the most Black workers. Compare with overall to spot segregation patterns.</div>
+            <div class="col-gender">
+              <div>
+                <div class="gender-block">
+                  <div class="g-label">Black Men</div>
+                  <div id="blackMenIndustryTable"></div>
+                </div>
+              </div>
+              <div>
+                <div class="gender-block">
+                  <div class="g-label">Black Women</div>
+                  <div id="blackWomenIndustryTable"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="chart-panel">
+          <div class="panel-title">Overall Industry Employment — All States</div>
+          <div class="panel-desc">Which industries dominate across all assigned states? Horizontal bars show employment count. Common industries across states reveal structural patterns in the labor market.</div>
+          <div class="chart-wrap tall">
+            <canvas id="allStatesIndustryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end content -->
+</div>
+
+<script>
+const API_TOKEN = 'patlFHiXMk8JGwEzg.bd9f97b9eeec3597a624d2908201ee3b1f2f4df3dc4d1485d83da43e81bcca78';
+const BASE_ID = 'appzWMklmNfDBJMRa';
+const TABLE_ID = 'tblMduxdcjKxbHDtK';
+
+const STATE_COLORS = ['#c8341a','#2d6a4f','#d4a843','#4a6fa5'];
+const STATE_COLORS_ALPHA = (i, a) => STATE_COLORS[i % STATE_COLORS.length].replace('#','') 
+  ? hexToRgba(STATE_COLORS[i % STATE_COLORS.length], a) : STATE_COLORS[i % STATE_COLORS.length];
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+let allStates = [];
+let charts = {};
+let activeIndustryState = 0;
+
+function fmt(n, type='pct') {
+  if (n == null || n === '' || isNaN(n)) return '—';
+  if (type === 'pct') return n.toFixed(1) + '%';
+  if (type === 'dollar') return '$' + Number(n).toLocaleString();
+  if (type === 'count') return Number(n).toLocaleString();
+  return n;
+}
+
+function getField(record, name) {
+  // find by field name in cellValues
+  return record.fields?.[name] ?? record.cellValuesByName?.[name] ?? null;
+}
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('content').style.display = 'none';
+
+  try {
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${API_TOKEN}` }
+    });
+    const data = await res.json();
+
+    if (!data.records || data.records.length === 0) {
+      document.getElementById('loading').innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📋</div>
+          <div>No state data submitted yet.<br>Share the Airtable form with your groups to get started.</div>
+        </div>`;
+      return;
+    }
+
+    allStates = data.records.map(r => r.fields);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    renderLegend();
+    renderUnemployment();
+    renderWages();
+    renderIndustry();
+
+  } catch(e) {
+    document.getElementById('loading').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">⚠️</div>
+        <div>Could not load data. Check your network connection.<br><small>${e.message}</small></div>
+      </div>`;
+  }
+}
+
+function renderLegend() {
+  const el = document.getElementById('stateLegend');
+  el.innerHTML = '';
+  if (allStates.length === 0) {
+    el.innerHTML = '<div class="state-pill no-data-pill">No states submitted yet</div>';
+    return;
+  }
+  allStates.forEach((s, i) => {
+    const name = s['State'] || 'Unknown';
+    const red = s['Red/Blue State (2020 Election)'];
+    const political = red ? ` · ${typeof red === 'object' ? red.name : red}` : '';
+    el.innerHTML += `<div class="state-pill">
+      <div class="state-swatch" style="background:${STATE_COLORS[i % STATE_COLORS.length]}"></div>
+      ${name}${political}
+    </div>`;
+  });
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function renderUnemployment() {
+  const states = allStates;
+
+  // Stat cards — worst gaps
+  const cards = document.getElementById('unempStatCards');
+  cards.innerHTML = '';
+  states.forEach((s, i) => {
+    const bm = s['Black Unemployment Rate - Men (%)'];
+    const bw = s['Black Unemployment Rate - Women (%)'];
+    const all_m = s['Overall Unemployment Rate - Men (%)'];
+    const gapM = bm != null && all_m != null ? (bm - all_m).toFixed(1) : null;
+    cards.innerHTML += `
+      <div class="stat-card">
+        <div class="label">Black Men Unemployment</div>
+        <div class="value" style="color:${STATE_COLORS[i % 4]}">${fmt(bm)}</div>
+        <div class="state-tag">${s['State'] || '—'} ${gapM !== null ? `· +${gapM}pp vs. overall` : ''}</div>
+      </div>`;
+  });
+
+  // Chart 1: Black vs overall unemployment
+  destroyChart('unempCompare');
+  const labels = states.map(s => s['State'] || '?');
+  const ctx1 = document.getElementById('unempCompareChart').getContext('2d');
+  charts['unempCompare'] = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Overall (Men)',
+          data: states.map(s => s['Overall Unemployment Rate - Men (%)']),
+          backgroundColor: 'rgba(10,10,10,0.15)',
+          borderColor: 'rgba(10,10,10,0.4)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Overall (Women)',
+          data: states.map(s => s['Overall Unemployment Rate - Women (%)']),
+          backgroundColor: 'rgba(10,10,10,0.08)',
+          borderColor: 'rgba(10,10,10,0.25)',
+          borderWidth: 1,
+        },
+        {
+          label: 'Black Men',
+          data: states.map(s => s['Black Unemployment Rate - Men (%)']),
+          backgroundColor: states.map((_, i) => hexToRgba(STATE_COLORS[i % 4], 0.85)),
+          borderWidth: 0,
+        },
+        {
+          label: 'Black Women',
+          data: states.map(s => s['Black Unemployment Rate - Women (%)']),
+          backgroundColor: states.map((_, i) => hexToRgba(STATE_COLORS[i % 4], 0.45)),
+          borderWidth: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: v => v + '%', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+
+  // Chart 2: Black gender gap
+  destroyChart('unempGender');
+  const ctx2 = document.getElementById('unempGenderChart').getContext('2d');
+  charts['unempGender'] = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Black Men',
+          data: states.map(s => s['Black Unemployment Rate - Men (%)']),
+          backgroundColor: states.map((_, i) => STATE_COLORS[i % 4]),
+          borderWidth: 0,
+        },
+        {
+          label: 'Black Women',
+          data: states.map(s => s['Black Unemployment Rate - Women (%)']),
+          backgroundColor: states.map((_, i) => hexToRgba(STATE_COLORS[i % 4], 0.4)),
+          borderWidth: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: v => v + '%', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+
+  // Chart 3: Gap bar chart
+  destroyChart('unempGap');
+  const ctx3 = document.getElementById('unempGapChart').getContext('2d');
+  const gapDataM = states.map(s => {
+    const bm = s['Black Unemployment Rate - Men (%)'];
+    const om = s['Overall Unemployment Rate - Men (%)'];
+    return bm != null && om != null ? parseFloat((bm - om).toFixed(2)) : null;
+  });
+  const gapDataW = states.map(s => {
+    const bw = s['Black Unemployment Rate - Women (%)'];
+    const ow = s['Overall Unemployment Rate - Women (%)'];
+    return bw != null && ow != null ? parseFloat((bw - ow).toFixed(2)) : null;
+  });
+
+  charts['unempGap'] = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Gap: Black Men vs. Overall Men', data: gapDataM, backgroundColor: states.map((_, i) => STATE_COLORS[i % 4]), borderWidth: 0 },
+        { label: 'Gap: Black Women vs. Overall Women', data: gapDataW, backgroundColor: states.map((_, i) => hexToRgba(STATE_COLORS[i % 4], 0.4)), borderWidth: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: +${ctx.raw}pp` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: v => '+' + v + 'pp', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+}
+
+function renderWages() {
+  const states = allStates;
+  const labels = states.map(s => s['State'] || '?');
+
+  // Stat cards
+  const cards = document.getElementById('wageStatCards');
+  cards.innerHTML = '';
+  states.forEach((s, i) => {
+    const bm = s['Median Wage - Black Workers Men ($)'];
+    const am = s['Median Wage - All Workers Men ($)'];
+    const ratio = bm && am ? (bm/am*100).toFixed(0) : null;
+    cards.innerHTML += `
+      <div class="stat-card">
+        <div class="label">Black Men Median Wage</div>
+        <div class="value" style="color:${STATE_COLORS[i % 4]}">${fmt(bm,'dollar')}</div>
+        <div class="state-tag">${s['State'] || '—'} ${ratio ? `· ${ratio}¢ per $1 overall` : ''}</div>
+      </div>`;
+  });
+
+  // Chart 1: Black vs all wages
+  destroyChart('wageCompare');
+  const ctx1 = document.getElementById('wageCompareChart').getContext('2d');
+  charts['wageCompare'] = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'All Workers (Men)', data: states.map(s => s['Median Wage - All Workers Men ($)']), backgroundColor: 'rgba(10,10,10,0.15)', borderColor: 'rgba(10,10,10,0.3)', borderWidth: 1 },
+        { label: 'All Workers (Women)', data: states.map(s => s['Median Wage - All Workers Women ($)']), backgroundColor: 'rgba(10,10,10,0.08)', borderColor: 'rgba(10,10,10,0.15)', borderWidth: 1 },
+        { label: 'Black Men', data: states.map(s => s['Median Wage - Black Workers Men ($)']), backgroundColor: states.map((_, i) => STATE_COLORS[i % 4]), borderWidth: 0 },
+        { label: 'Black Women', data: states.map(s => s['Median Wage - Black Workers Women ($)']), backgroundColor: states.map((_, i) => hexToRgba(STATE_COLORS[i % 4], 0.45)), borderWidth: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+
+  // Chart 2: Black gender wage gap
+  destroyChart('wageGender');
+  const ctx2 = document.getElementById('wageGenderChart').getContext('2d');
+  charts['wageGender'] = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Black Men', data: states.map(s => s['Median Wage - Black Workers Men ($)']), backgroundColor: states.map((_, i) => STATE_COLORS[i % 4]), borderWidth: 0 },
+        { label: 'Black Women', data: states.map(s => s['Median Wage - Black Workers Women ($)']), backgroundColor: states.map((_, i) => hexToRgba(STATE_COLORS[i % 4], 0.4)), borderWidth: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k', font: { family: 'DM Mono', size: 10 } } }
+      }
+    }
+  });
+
+  // Chart 3: Wage ratio
+  destroyChart('wageRatio');
+  const ctx3 = document.getElementById('wageRatioChart').getContext('2d');
+  const ratioM = states.map(s => {
+    const bm = s['Median Wage - Black Workers Men ($)'];
+    const am = s['Median Wage - All Workers Men ($)'];
+    return bm && am ? parseFloat((bm / am).toFixed(3)) : null;
+  });
+  const ratioW = states.map(s => {
+    const bw = s['Median Wage - Black Workers Women ($)'];
+    const aw = s['Median Wage - All Workers Women ($)'];
+    return bw && aw ? parseFloat((bw / aw).toFixed(3)) : null;
+  });
+
+  charts['wageRatio'] = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Black Men ÷ All Men', data: ratioM, backgroundColor: states.map((_, i) => STATE_COLORS[i % 4]), borderWidth: 0 },
+        { label: 'Black Women ÷ All Women', data: ratioW, backgroundColor: states.map((_, i) => hexToRgba(STATE_COLORS[i % 4], 0.4)), borderWidth: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${(ctx.raw * 100).toFixed(1)}¢ per $1` } },
+        annotation: {}
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 11 } } },
+        y: {
+          min: 0, max: 1.1,
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          ticks: { callback: v => (v * 100).toFixed(0) + '¢', font: { family: 'DM Mono', size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+function renderIndustry() {
+  const states = allStates;
+
+  // State tabs
+  const tabsEl = document.getElementById('industryStateTabs');
+  tabsEl.innerHTML = '';
+  states.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'state-tab-btn' + (i === activeIndustryState ? ' active' : '');
+    btn.textContent = s['State'] || 'State ' + (i+1);
+    btn.style.borderBottom = `3px solid ${STATE_COLORS[i % 4]}`;
+    btn.onclick = () => {
+      activeIndustryState = i;
+      document.querySelectorAll('.state-tab-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+      renderIndustryTables(i);
+    };
+    tabsEl.appendChild(btn);
+  });
+
+  renderIndustryTables(activeIndustryState);
+  renderAllStatesIndustryChart();
+}
+
+function renderIndustryTables(idx) {
+  const s = allStates[idx];
+  if (!s) return;
+
+  // Overall top 5
+  const overallRows = [1,2,3,4,5].map(r => ({
+    rank: r,
+    industry: s[`Overall Employment Rank ${r} - Industry`],
+    count: s[`Overall Employment Rank ${r} - Employment Count`]
+  })).filter(r => r.industry);
+
+  document.getElementById('overallIndustryTable').innerHTML = buildIndustryTable(overallRows, 'count');
+
+  // Black men top 5
+  const menRows = [1,2,3,4,5].map(r => ({
+    rank: r,
+    industry: s[`Black Employment Rank ${r} - Industry (Men)`],
+    count: s[`Black Employment Rank ${r} - Employment Count (Men)`]
+  })).filter(r => r.industry);
+  document.getElementById('blackMenIndustryTable').innerHTML = buildSimpleList(menRows);
+
+  // Black women top 5
+  const womenRows = [1,2,3,4,5].map(r => ({
+    rank: r,
+    industry: s[`Black Employment Rank ${r} - Industry (Women)`],
+    count: s[`Black Employment Rank ${r} - Employment Count (Women)`]
+  })).filter(r => r.industry);
+  document.getElementById('blackWomenIndustryTable').innerHTML = buildSimpleList(womenRows);
+}
+
+function buildIndustryTable(rows, valueType) {
+  if (!rows.length) return '<div class="empty-state" style="padding:1rem;font-size:0.78rem">No data submitted yet</div>';
+  return `<table class="industry-table">
+    <tr><th>#</th><th>Industry</th><th>${valueType === 'count' ? 'Workers' : 'Median Wage'}</th></tr>
+    ${rows.map(r => `<tr>
+      <td><span class="rank-badge">${r.rank}</span></td>
+      <td>${r.industry || '—'}</td>
+      <td class="wage-value">${valueType === 'count' ? fmt(r.count, 'count') : fmt(r.count, 'dollar')}</td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+function buildSimpleList(rows) {
+  if (!rows.length) return '<div style="font-size:0.75rem;color:#7a7268;padding:0.5rem">No data yet</div>';
+  return rows.map(r => `
+    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid rgba(0,0,0,0.08);font-size:0.78rem">
+      <span class="rank-badge" style="flex-shrink:0">${r.rank}</span>
+      <span style="flex:1">${r.industry}</span>
+    </div>`).join('');
+}
+
+function renderAllStatesIndustryChart() {
+  destroyChart('allStatesIndustry');
+  const ctx = document.getElementById('allStatesIndustryChart').getContext('2d');
+
+  // Collect all unique industries across states with their counts
+  const industryMap = {};
+  allStates.forEach((s, si) => {
+    [1,2,3,4,5].forEach(r => {
+      const ind = s[`Overall Employment Rank ${r} - Industry`];
+      const cnt = s[`Overall Employment Rank ${r} - Employment Count`];
+      if (ind) {
+        if (!industryMap[ind]) industryMap[ind] = new Array(allStates.length).fill(null);
+        industryMap[ind][si] = cnt || 0;
+      }
+    });
+  });
+
+  const industries = Object.keys(industryMap);
+  const datasets = allStates.map((s, i) => ({
+    label: s['State'] || 'State ' + (i+1),
+    data: industries.map(ind => industryMap[ind][i]),
+    backgroundColor: hexToRgba(STATE_COLORS[i % 4], 0.8),
+    borderWidth: 0,
+  }));
+
+  charts['allStatesIndustry'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: industries, datasets },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: v => (v/1000).toFixed(0) + 'k', font: { family: 'DM Mono', size: 10 } } },
+        y: { grid: { display: false }, ticks: { font: { family: 'DM Sans', size: 11 } } }
+      }
+    }
+  });
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+loadData();
+</script>
+</body>
+</html>
