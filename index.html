@@ -375,20 +375,20 @@ header {
       <div class="mb3">
         <div class="sec-tag">05 — Labor Power</div>
         <div class="sec-title">Organizing & Wages</div>
-        <div class="sec-desc">Black unionization rates by gender, cross-referenced with minimum wage and political designation. Does union density track with better wage floors?</div>
+        <div class="sec-desc">Unionization rates by gender, cross-referenced with minimum wage and political designation. Does union density track with better wage floors?</div>
       </div>
 
       <div class="g4 mb2" id="unionCards"></div>
 
       <div class="g2 mb2">
         <div class="panel">
-          <div class="ptitle">Black Unionization Rate by Gender</div>
-          <div class="pdesc">Black men vs. Black women union membership across states.</div>
+          <div class="ptitle">Unionization Rate by Gender</div>
+          <div class="pdesc">Men vs. women union membership across states.</div>
           <div class="cw"><canvas id="unionChart"></canvas></div>
         </div>
         <div class="panel">
           <div class="ptitle">Union Rate vs. Minimum Wage</div>
-          <div class="pdesc">Scatter: does higher Black union density correlate with higher minimum wages? Each dot is a state.</div>
+          <div class="pdesc">Scatter: does higher union density correlate with higher minimum wages? Each dot is a state.</div>
           <div class="cw"><canvas id="unionWageScatter"></canvas></div>
         </div>
       </div>
@@ -648,7 +648,12 @@ function renderMap() {
         const party = getParty(stateData);
         const bUnemp = stateData['Black Unemployment Rate - Men (%)'];
         const minW = stateData['Minimum Wage ($)'];
-        tip.innerHTML = `<strong>${state}</strong><br>${party} state<br>Black unemp (M): ${fmt(bUnemp)}<br>Min wage: ${fmt(minW,'dollar')}/hr`;
+        const hasBWC = stateData['Has Black Worker Center?'];
+        const hasCRO = stateData['Has Civil Rights Office?'];
+        const bwcName = stateData['Black Worker Center Name & Contact'] || '';
+        const bwcLine = hasBWC ? `✅ Black Worker Center${bwcName ? ': '+bwcName.split('\n')[0].substring(0,30) : ''}` : '❌ No Black Worker Center';
+        const croLine = hasCRO ? '✅ Civil Rights Office' : '❌ No Civil Rights Office';
+        tip.innerHTML = `<strong>${state}</strong><br>${party} state<br>Black unemp (M): ${fmt(bUnemp)}<br>Min wage: ${fmt(minW,'dollar')}/hr<br>${bwcLine}<br>${croLine}`;
         tip.style.opacity='1';
         tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY-10)+'px';
       });
@@ -736,13 +741,18 @@ function renderDemoStack() {
   const raceColors = ['#c8c0b0','#bf2d1a','#c9993a','#2a4d8f','#7b3f8c'];
   const raceLabels = ['White','Black','Latinx/e','Asian','Other'];
 
+  // Determine per-state whether values are decimals (0-1) or percentages (1-100)
+  // by checking if the sum of all race fields is roughly <=1 (decimal) or ~100 (percentage)
+  function normalizePct(s, col) {
+    const v = s[col];
+    if (v==null) return null;
+    const allVals = raceCols.map(c=>s[c]).filter(x=>x!=null);
+    const sum = allVals.reduce((a,b)=>a+b,0);
+    return sum <= 2 ? v*100 : v; // sum<=2 means decimals (e.g. 0.06+0.36+...), else already %
+  }
   const datasets = raceCols.map((col,i)=>({
     label: raceLabels[i],
-    data: FILTERED.map(s=>{
-      const v = s[col];
-      if (v==null) return null;
-      return v>1 ? v : v*100; // handle both decimal and percentage
-    }),
+    data: FILTERED.map(s=> normalizePct(s, col)),
     backgroundColor: raceColors[i],
     borderWidth:0,
   }));
@@ -790,10 +800,14 @@ function renderDemoBars(idx) {
     {label:'Other', field:'% Other', col:'#7b3f8c'},
   ];
   el.innerHTML = `<div class="ptitle" style="margin-bottom:.8rem">${s['State']||'—'}</div>`;
+  // Determine if values are decimals or percentages by summing all race fields
+  const allRaceVals = races.map(r=>s[r.field]).filter(x=>x!=null);
+  const raceSum = allRaceVals.reduce((a,b)=>a+b,0);
+  const isDecimal = raceSum <= 2;
   races.forEach(r=>{
     let v = s[r.field];
     if (v==null) return;
-    if (v<=1) v=v*100;
+    if (isDecimal) v = v*100;
     el.innerHTML += `<div class="demo-bar-row">
       <div class="demo-bar-label"><span>${r.label}</span><span>${v.toFixed(1)}%</span></div>
       <div class="demo-bar-track"><div class="demo-bar-fill" style="width:${Math.min(v,100)}%;background:${r.col}"></div></div>
@@ -860,11 +874,16 @@ function renderWages() {
 
   // Scorecard
   const sc=document.getElementById('wageScorecard');
+  const thTip = (label, tip) => `<th title="${tip}" style="cursor:help;border-bottom:1px dotted #999">${label} ℹ</th>`;
   sc.innerHTML=`<thead><tr>
-    <th>State</th><th>Party</th>
-    <th>Black Men Wage</th><th>Black Women Wage</th>
-    <th>Gap Ratio (Men)</th><th>Gap Ratio (Women)</th>
-    <th>Gender Gap (Black)</th><th>Min Wage % of Black Median</th>
+    <th>State</th>
+    <th>Party</th>
+    <th>Black Men Median Wage</th>
+    <th>Black Women Median Wage</th>
+    ${thTip('Gap Ratio (Men)', 'How many cents a Black man earns for every $1 earned by all men in this state. E.g. 94.4¢ means Black men earn 94.4% of what all men earn. Closer to 100¢ = smaller gap.')}
+    ${thTip('Gap Ratio (Women)', 'How many cents a Black woman earns for every $1 earned by all women in this state. Closer to 100¢ = smaller gap.')}
+    ${thTip('Gender Gap (Black)', 'The dollar difference between what Black men and Black women earn annually. Shows the wage gap within the Black workforce by gender.')}
+    ${thTip('Min Wage % of Black Median', 'The minimum wage annualized (hourly × 2,080 hrs/year) as a share of the Black median annual wage. A higher % means the wage floor is closer to what Black workers actually earn — important because it shows how much lifting the minimum wage would affect Black workers specifically. 100% would mean the minimum wage equals the Black median wage.')}
   </tr></thead><tbody>${states.map((s,i)=>{
     const bm=s['Median Wage - Black Workers Men ($)'];
     const bw=s['Median Wage - Black Workers Women ($)'];
@@ -874,18 +893,25 @@ function renderWages() {
     const ratioM=bm&&am?+(bm/am).toFixed(3):null;
     const ratioW=bw&&aw?+(bw/aw).toFixed(3):null;
     const genderGap=bm&&bw?fmt(bm-bw,'dollar'):null;
-    const minPct=mw&&bm?((mw*2080)/bm*100).toFixed(0):null; // annualized
+    const minPct=mw&&bm?((mw*2080)/bm*100).toFixed(0):null;
     const party=getParty(s);
+    const stateName=s['State']||'—';
     const ratioClass=r=>!r?'':r<0.8?'gap-bad':r<0.9?'gap-ok':'gap-good';
+    const ratioMStr = ratioM ? fmtRatio(bm,am) : '—';
+    const ratioWStr = ratioW ? fmtRatio(bw,aw) : '—';
+    const ratioMTip = ratioM ? `In ${stateName}, Black men earn ${ratioMStr} for every $1 earned by all men` : '';
+    const ratioWTip = ratioW ? `In ${stateName}, Black women earn ${ratioWStr} for every $1 earned by all women` : '';
+    const minPctTip = minPct ? `The annualized minimum wage ($${mw}/hr × 2,080 hrs = $${Math.round(mw*2080).toLocaleString()}/yr) is ${minPct}% of Black workers' median wage ($${bm?.toLocaleString()}). This means the wage floor sits at ${minPct}% of what a typical Black worker earns.` : '';
+    const gapTip = genderGap ? `Black men earn ${genderGap} more per year than Black women in ${stateName}` : '';
     return `<tr>
-      <td class="sc-state" style="color:${color(idxs[i])}">${s['State']||'—'}</td>
+      <td class="sc-state" style="color:${color(idxs[i])}">${stateName}</td>
       <td><span class="sc-badge ${party==='Blue'?'sc-blue':'sc-red'}">${party}</span></td>
       <td class="wmono">${fmt(bm,'dollar')}</td>
       <td class="wmono">${fmt(bw,'dollar')}</td>
-      <td class="${ratioClass(ratioM)}">${ratioM?fmtRatio(bm,am):'—'}</td>
-      <td class="${ratioClass(ratioW)}">${ratioW?fmtRatio(bw,aw):'—'}</td>
-      <td class="wmono">${genderGap||'—'}</td>
-      <td class="wmono">${minPct?minPct+'%':'—'}</td>
+      <td class="${ratioClass(ratioM)}" title="${ratioMTip}" style="cursor:help">${ratioMStr}</td>
+      <td class="${ratioClass(ratioW)}" title="${ratioWTip}" style="cursor:help">${ratioWStr}</td>
+      <td class="wmono" title="${gapTip}" style="cursor:help">${genderGap||'—'}</td>
+      <td class="wmono" title="${minPctTip}" style="cursor:help">${minPct?minPct+'%':'—'}</td>
     </tr>`;
   }).join('')}</tbody>`;
 
@@ -985,38 +1011,58 @@ function renderWQTables(idx) {
   if (!s) { document.getElementById('wageQualTables').innerHTML='<div class="empty-msg">No data yet</div>'; return; }
   const stateColor=color(stateColorIndex(s['State']));
 
+  // General workforce highest/lowest (all workers)
+  const hiAllM=[1,2,3,4,5].map(r=>({rank:r,industry:s[`Highest Median Wage Rank ${r} - Industry (Men)`],val:s[`Highest Median Wage Rank ${r} - Wage Men ($)`]})).filter(r=>r.industry);
+  const hiAllW=[1,2,3,4,5].map(r=>({rank:r,industry:s[`Highest Median Wage Rank ${r} - Industry (Women)`],val:s[`Highest Median Wage Rank ${r} - Wage Women ($)`]})).filter(r=>r.industry);
+
+  // Black workforce highest/lowest
   const hiM=[1,2,3,4,5].map(r=>({rank:r,industry:s[`Highest Black Median Wage Rank ${r} - Industry (Men)`],val:s[`Highest Black Median Wage Rank ${r} - Wage Men ($)`]})).filter(r=>r.industry);
   const hiW=[1,2,3,4,5].map(r=>({rank:r,industry:s[`Highest Black Median Wage Rank ${r} - Industry (Women)`],val:s[`Highest Black Median Wage Rank ${r} - Wage Women ($)`]})).filter(r=>r.industry);
   const loM=[1,2,3,4,5].map(r=>({rank:r,industry:s[`Lowest Black Median Wage Rank ${r} - Industry (Men)`],val:s[`Lowest Black Median Wage Rank ${r} - Wage Men ($)`]})).filter(r=>r.industry);
   const loW=[1,2,3,4,5].map(r=>({rank:r,industry:s[`Lowest Black Median Wage Rank ${r} - Industry (Women)`],val:s[`Lowest Black Median Wage Rank ${r} - Wage Women ($)`]})).filter(r=>r.industry);
 
+  // Top common industries for overlap flagging
+  const commonInds=new Set([1,2,3,4,5].map(r=>s[`Overall Employment Rank ${r} - Industry`]).filter(Boolean));
+
   document.getElementById('wageQualTables').innerHTML=`
     <div>
+      <div style="font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#555;font-family:'DM Mono',monospace;margin-bottom:.6rem;padding:.3rem .5rem;background:var(--cream)">ALL WORKERS</div>
       <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--green);font-family:'DM Mono',monospace;margin-bottom:.4rem">▲ Highest Paying — Men</div>
-      ${buildIndTbl(hiM,'dollar',stateColor)}
-      <div style="height:1rem"></div>
-      <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--red);font-family:'DM Mono',monospace;margin-bottom:.4rem">▼ Lowest Paying — Men</div>
-      ${buildIndTbl(loM,'dollar',stateColor)}
+      ${buildIndTbl(hiAllM,'dollar',stateColor,commonInds,'lo')}
+      <div style="height:.8rem"></div>
+      <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--green);font-family:'DM Mono',monospace;margin-bottom:.4rem">▲ Highest Paying — Women</div>
+      ${buildIndTbl(hiAllW,'dollar',stateColor,commonInds,'lo')}
     </div>
     <div>
+      <div style="font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#555;font-family:'DM Mono',monospace;margin-bottom:.6rem;padding:.3rem .5rem;background:var(--cream)">BLACK WORKERS</div>
+      <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--green);font-family:'DM Mono',monospace;margin-bottom:.4rem">▲ Highest Paying — Men</div>
+      ${buildIndTbl(hiM,'dollar',stateColor,commonInds,'lo')}
+      <div style="height:.6rem"></div>
+      <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--red);font-family:'DM Mono',monospace;margin-bottom:.4rem">▼ Lowest Paying — Men ⚠️ = also top employer</div>
+      ${buildIndTbl(loM,'dollar',stateColor,commonInds,'lo')}
+      <div style="height:.6rem"></div>
       <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--green);font-family:'DM Mono',monospace;margin-bottom:.4rem">▲ Highest Paying — Women</div>
-      ${buildIndTbl(hiW,'dollar',stateColor)}
-      <div style="height:1rem"></div>
-      <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--red);font-family:'DM Mono',monospace;margin-bottom:.4rem">▼ Lowest Paying — Women</div>
-      ${buildIndTbl(loW,'dollar',stateColor)}
+      ${buildIndTbl(hiW,'dollar',stateColor,commonInds,'lo')}
+      <div style="height:.6rem"></div>
+      <div style="font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--red);font-family:'DM Mono',monospace;margin-bottom:.4rem">▼ Lowest Paying — Women ⚠️ = also top employer</div>
+      ${buildIndTbl(loW,'dollar',stateColor,commonInds,'lo')}
     </div>
   `;
 }
 
-function buildIndTbl(rows, valType, stateColor) {
+function buildIndTbl(rows, valType, stateColor, commonInds=new Set(), flagType='lo') {
   if (!rows.length) return '<div style="font-size:.75rem;color:var(--muted);padding:.5rem">No data submitted yet</div>';
   return `<table class="ind-table">
     <tr><th>#</th><th>Industry</th><th>${valType==='count'?'Workers':'Median Wage'}</th></tr>
-    ${rows.map(r=>`<tr>
-      <td><span class="rbadge" style="background:${stateColor}">${r.rank}</span></td>
-      <td style="font-size:.78rem">${r.industry}</td>
-      <td class="wmono">${valType==='count'?fmt(r.val,'count'):fmt(r.val,'dollar')}</td>
-    </tr>`).join('')}
+    ${rows.map(r=>{
+      const isCommon = commonInds.has(r.industry);
+      const flag = isCommon && flagType==='lo' ? ' <span title="Also a top employer — high concentration, low pay" style="color:var(--red);font-size:.75rem;cursor:help">⚠️</span>' : '';
+      return `<tr style="${isCommon&&flagType==='lo'?'background:rgba(191,45,26,0.05)':''}">
+        <td><span class="rbadge" style="background:${stateColor}">${r.rank}</span></td>
+        <td style="font-size:.78rem">${r.industry}${flag}</td>
+        <td class="wmono">${valType==='count'?fmt(r.val,'count'):fmt(r.val,'dollar')}</td>
+      </tr>`;
+    }).join('')}
   </table>`;
 }
 
@@ -1025,10 +1071,18 @@ function renderCrossStateInd() {
   if (!FILTERED.length) return;
   const indMap={};
   FILTERED.forEach((s,si)=>{
+    const totalWorkers = [1,2,3,4,5].reduce((sum,r)=>{
+      return sum + (s[`Overall Employment Rank ${r} - Employment Count`]||0);
+    },0);
     [1,2,3,4,5].forEach(r=>{
       const ind=s[`Overall Employment Rank ${r} - Industry`];
       const cnt=s[`Overall Employment Rank ${r} - Employment Count`];
-      if (ind) { if(!indMap[ind]) indMap[ind]=new Array(FILTERED.length).fill(null); indMap[ind][si]=cnt||0; }
+      if (ind) {
+        if(!indMap[ind]) indMap[ind]=new Array(FILTERED.length).fill(null);
+        // normalize: store as % of that state's top-5 total workforce
+        const pct = totalWorkers>0 ? +((cnt||0)/totalWorkers*100).toFixed(1) : null;
+        indMap[ind][si]=pct;
+      }
     });
   });
   const industries=Object.keys(indMap);
@@ -1043,9 +1097,12 @@ function renderCrossStateInd() {
     }))},
     options:{
       indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:11},boxWidth:12}}},
+      plugins:{
+        legend:{position:'bottom',labels:{font:{family:'DM Sans',size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.raw}% of top-5 workforce`}}
+      },
       scales:{
-        x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:v=>(v/1000).toFixed(0)+'k',font:{family:'DM Mono',size:10}}},
+        x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:v=>v+'%',font:{family:'DM Mono',size:10}},title:{display:true,text:'Share of State Top-5 Employment',font:{family:'DM Mono',size:9}}},
         y:{grid:{display:false},ticks:{font:{family:'DM Sans',size:11}}}
       }
     }
@@ -1067,7 +1124,7 @@ function renderLabor() {
     const um=s['Black Unionization Rate - Men (%)'];
     const uw=s['Black Unionization Rate - Women (%)'];
     cards.innerHTML+=`<div class="scard">
-      <div class="slabel">Black Union Rate</div>
+      <div class="slabel">Union Rate (Men)</div>
       <div class="sval" style="color:${color(idxs[i])}">${fmt(um)}</div>
       <div class="stag">${s['State']||'—'} · Women: ${fmt(uw)}</div>
     </div>`;
@@ -1077,8 +1134,8 @@ function renderLabor() {
   killChart('union');
   const ctx1=document.getElementById('unionChart').getContext('2d');
   CHARTS['union']=new Chart(ctx1,{type:'bar',data:{labels,datasets:[
-    {label:'Black Men',data:states.map(s=>s['Black Unionization Rate - Men (%)']),backgroundColor:idxs.map(i=>color(i,0.9)),borderWidth:0},
-    {label:'Black Women',data:states.map(s=>s['Black Unionization Rate - Women (%)']),backgroundColor:idxs.map(i=>color(i,0.4)),borderWidth:0},
+    {label:'Men',data:states.map(s=>s['Black Unionization Rate - Men (%)']),backgroundColor:idxs.map(i=>color(i,0.9)),borderWidth:0},
+    {label:'Women',data:states.map(s=>s['Black Unionization Rate - Women (%)']),backgroundColor:idxs.map(i=>color(i,0.4)),borderWidth:0},
   ]},options:stdOpts({ySuffix:'%'})});
 
   // Chart 2: scatter union vs min wage
