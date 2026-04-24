@@ -799,7 +799,8 @@ async function loadData() {
       records.forEach(r => {
         Object.keys(r).forEach(k => {
           if (numFields.includes(k) || k.includes('Employment Count') || k.includes('Wage Men') || k.includes('Wage Women') || k.includes('Wage ($)')) {
-            const n = parseFloat(r[k]);
+            const cleaned = (r[k] || '').toString().replace(/[$,]/g, '');
+            const n = parseFloat(cleaned);
             r[k] = isNaN(n) ? null : n;
           }
         });
