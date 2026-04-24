@@ -289,6 +289,45 @@ header {
 .eco-expand-btn:hover { text-decoration:underline; }
 
 /* ── FOOTER ── */
+/* ── POLICY DATABASE ── */
+.pol-filter-bar { background:var(--cream); border:1px solid var(--border); padding:1rem 1.2rem; display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-start; }
+.pol-filter-group { display:flex; flex-direction:column; gap:.35rem; }
+.pol-filter-label { font-size:.58rem; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); font-family:'DM Mono',monospace; font-weight:600; }
+.pol-filter-pills { display:flex; flex-wrap:wrap; gap:.3rem; }
+.pol-pill { padding:.22rem .65rem; font-size:.65rem; letter-spacing:.06em; text-transform:uppercase; font-weight:600; cursor:pointer; border:1.5px solid var(--border); color:var(--muted); transition:all .15s; white-space:nowrap; }
+.pol-pill.active { background:var(--black); color:var(--white); border-color:var(--black); }
+.pol-pill.ca-active { background:var(--gold); color:var(--black); border-color:var(--gold); }
+.pol-search-wrap { flex:1; min-width:200px; display:flex; align-items:flex-end; }
+.pol-search { width:100%; border:1.5px solid var(--border); background:var(--white); padding:.4rem .8rem; font-family:'DM Sans',sans-serif; font-size:.8rem; outline:none; }
+.pol-search:focus { border-color:var(--black); }
+.pol-results-bar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.5rem; }
+.pol-results-txt { font-family:'DM Mono',monospace; font-size:.68rem; color:var(--muted); letter-spacing:.05em; }
+.pol-sort-sel { border:1.5px solid var(--border); background:var(--white); padding:.3rem .6rem; font-family:'DM Mono',monospace; font-size:.65rem; letter-spacing:.05em; cursor:pointer; outline:none; }
+.pol-cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:1rem; }
+.pol-card { background:var(--white); border:1px solid var(--border); border-top:3px solid var(--black); padding:1.2rem 1.4rem; display:flex; flex-direction:column; gap:.6rem; transition:box-shadow .2s; }
+.pol-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.pol-card.ca-potential { border-top-color:var(--gold); }
+.pol-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem; }
+.pol-card-state { font-family:'DM Mono',monospace; font-size:.62rem; letter-spacing:.12em; text-transform:uppercase; font-weight:600; }
+.pol-ca-badge { background:var(--gold); color:var(--black); font-family:'DM Mono',monospace; font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; padding:.15rem .5rem; white-space:nowrap; }
+.pol-card-name { font-weight:600; font-size:.9rem; line-height:1.35; }
+.pol-card-desc { font-size:.78rem; color:#444; line-height:1.55; }
+.pol-card-desc.clamped { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.pol-read-more { font-size:.68rem; font-family:'DM Mono',monospace; color:var(--muted); cursor:pointer; letter-spacing:.05em; margin-top:-.3rem; text-decoration:underline; }
+.pol-card-meta { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.2rem; }
+.pol-tag { display:inline-block; padding:.15rem .55rem; font-size:.6rem; letter-spacing:.08em; text-transform:uppercase; font-weight:600; border:1px solid; }
+.pol-tag-topic { border-color:var(--blue); color:var(--blue); }
+.pol-tag-status-active { border-color:var(--green); color:var(--green); }
+.pol-tag-status-passed { border-color:var(--green); color:var(--green); background:rgba(42,96,68,.08); }
+.pol-tag-status-failed { border-color:var(--red); color:var(--red); }
+.pol-tag-status-proposed { border-color:var(--gold); color:#9a7020; }
+.pol-tag-status-other { border-color:var(--muted); color:var(--muted); }
+.pol-card-footer { border-top:1px solid var(--border); padding-top:.6rem; margin-top:.2rem; font-size:.68rem; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:.3rem; }
+.pol-card-links { display:flex; gap:.8rem; flex-wrap:wrap; }
+.pol-card-links a { color:var(--muted); font-family:'DM Mono',monospace; font-size:.65rem; letter-spacing:.05em; text-decoration:none; }
+.pol-card-links a:hover { color:var(--black); }
+.pol-card-note { background:rgba(201,153,58,.08); border-left:2px solid var(--gold); padding:.4rem .6rem; font-size:.72rem; color:#6a5010; line-height:1.45; margin-top:.1rem; }
+
 .site-footer {
   background:var(--black); color:#555;
   padding:2rem 2.5rem; margin-top:3rem;
@@ -351,6 +390,7 @@ header {
   <div class="tab" onclick="switchTab('industry',this)">Industry</div>
   <div class="tab" onclick="switchTab('labor',this)">Labor Power</div>
   <div class="tab" onclick="switchTab('ecosystem',this)">Ecosystem</div>
+  <div class="tab" onclick="switchTab('policy',this)">Policy Database</div>
 </div>
 
 <div class="main">
@@ -554,12 +594,71 @@ header {
       </div>
     </div>
 
+    <!-- ══ TAB: POLICY DATABASE ══ -->
+    <div class="tab-panel" id="tab-policy">
+      <div class="mb3">
+        <div class="sec-tag">07 — Policy Database</div>
+        <div class="sec-title">Policy Research Database</div>
+        <div class="sec-desc">Part 2 submissions — policies affecting Black workers across assigned states. Filter by topic, status, or state. Use CA Import to surface policies with California potential.</div>
+      </div>
+
+      <!-- HERO STATS -->
+      <div class="g4 mb2" id="policyHeroCards"></div>
+
+      <!-- FILTER BAR -->
+      <div class="pol-filter-bar mb2">
+        <div class="pol-filter-group">
+          <span class="pol-filter-label">State</span>
+          <div class="pol-filter-pills" id="polStateFilter"></div>
+        </div>
+        <div class="pol-filter-group">
+          <span class="pol-filter-label">Topic</span>
+          <div class="pol-filter-pills" id="polTopicFilter"></div>
+        </div>
+        <div class="pol-filter-group">
+          <span class="pol-filter-label">Status</span>
+          <div class="pol-filter-pills" id="polStatusFilter"></div>
+        </div>
+        <div class="pol-filter-group">
+          <span class="pol-filter-label">CA Import</span>
+          <div class="pol-filter-pills" id="polCAFilter">
+            <div class="pol-pill" id="polCA-all" onclick="setPolicyFilter('ca','all')">All</div>
+            <div class="pol-pill" id="polCA-yes" onclick="setPolicyFilter('ca','yes')">CA Potential ✦</div>
+          </div>
+        </div>
+        <div class="pol-search-wrap">
+          <input class="pol-search" id="polSearch" type="text" placeholder="Search policies..." oninput="renderPolicyCards()">
+        </div>
+      </div>
+
+      <!-- RESULTS COUNT -->
+      <div class="pol-results-bar mb2">
+        <span id="polResultsCount" class="pol-results-txt"></span>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <span class="pol-filter-label">Sort</span>
+          <select class="pol-sort-sel" id="polSort" onchange="renderPolicyCards()">
+            <option value="newest">Newest first</option>
+            <option value="state">By state</option>
+            <option value="status">By status</option>
+            <option value="ca">CA potential first</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- CARDS GRID -->
+      <div id="policyCards" class="pol-cards-grid"></div>
+
+      <!-- EMPTY STATE -->
+      <div id="policyEmpty" class="empty-msg" style="display:none">No policy entries match the current filters. Try broadening your search.</div>
+    </div>
+
   </div><!-- #dash -->
 </div><!-- .main -->
 
 <script>
 // ── CONFIG ──
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS-GD8hb26zKwXbn4c0w-BZhWmzulH4I29qNH0a59xzno9SMIUe0yySHdij9Uz5LW9CiAWXOK5zdRQi/pub?gid=824832318&single=true&output=csv';
+const POLICY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS-GD8hb26zKwXbn4c0w-BZhWmzulH4I29qNH0a59xzno9SMIUe0yySHdij9Uz5LW9CiAWXOK5zdRQi/pub?gid=0&single=true&output=csv';
 const PROXY_URL = 'https://api.allorigins.win/get?url=';
 
 // Color palette — supports up to 50 states
@@ -580,6 +679,8 @@ function color(i, a=1) {
 // ── STATE ──
 let ALL_STATES = [];
 let FILTERED = [];
+let ALL_POLICY = [];
+let FILTERED_POLICY = [];
 let activeFilter = 'all';
 let activeIndState = 0;
 let activeDemoState = 0;
@@ -656,56 +757,70 @@ function parseCSV(text) {
   return records;
 }
 
+async function fetchCSV(url) {
+  const bust = `&cachebust=${Date.now()}`;
+  try {
+    const direct = await fetch(url + bust);
+    if (!direct.ok) throw new Error('direct failed');
+    const text = await direct.text();
+    if (!text.includes(',')) throw new Error('unexpected response');
+    return text;
+  } catch {
+    const proxied = await fetch(PROXY_URL + encodeURIComponent(url + bust));
+    if (!proxied.ok) throw new Error(`Proxy HTTP ${proxied.status}`);
+    const json = await proxied.json();
+    return json.contents;
+  }
+}
+
 async function loadData() {
   document.getElementById('loading').style.display='flex';
   document.getElementById('dash').style.display='none';
 
-  // Ecosystem renders from Sheet data — will render once loaded
-
   try {
-    // Try direct fetch first (works if CORS headers are present)
-    // Fall back to allorigins proxy if blocked
-    // Cache-bust with timestamp so Refresh always pulls Google's latest version
-    const bust = `&cachebust=${Date.now()}`;
-    let text;
-    try {
-      const direct = await fetch(SHEET_CSV_URL + bust);
-      if (!direct.ok) throw new Error('direct failed');
-      text = await direct.text();
-      // Sanity check: should start with "State" or a CSV-like header
-      if (!text.trim().startsWith('State') && !text.includes(',')) throw new Error('unexpected response');
-    } catch {
-      const proxied = await fetch(PROXY_URL + encodeURIComponent(SHEET_CSV_URL + bust));
-      if (!proxied.ok) throw new Error(`Proxy HTTP ${proxied.status}`);
-      const json = await proxied.json();
-      text = json.contents;
-    }
-    const records = parseCSV(text);
+    // Fetch both sheets in parallel
+    const [landscapeText, policyText] = await Promise.allSettled([
+      fetchCSV(SHEET_CSV_URL),
+      fetchCSV(POLICY_CSV_URL),
+    ]);
 
-    // Coerce numeric fields
-    const numFields = [
-      'Total Population','% White','% Black','% Latinx/e','% Asian','% Other',
-      'Overall Unemployment Rate - Men (%)','Overall Unemployment Rate - Women (%)',
-      'Black Unemployment Rate - Men (%)','Black Unemployment Rate - Women (%)',
-      'Minimum Wage ($)',
-      'Median Wage - All Workers Men ($)','Median Wage - All Workers Women ($)',
-      'Median Wage - Black Workers Men ($)','Median Wage - Black Workers Women ($)',
-      'Unionization Rate - Men (%)','Unionization Rate - Women (%)',
-    ];
-    // Also coerce all employment count and wage rank fields
-    records.forEach(r => {
-      Object.keys(r).forEach(k => {
-        if (numFields.includes(k) || k.includes('Employment Count') || k.includes('Wage Men') || k.includes('Wage Women') || k.includes('Wage ($)')) {
-          const n = parseFloat(r[k]);
-          r[k] = isNaN(n) ? null : n;
-        }
+    // ── LANDSCAPE DATA ──
+    if (landscapeText.status === 'fulfilled') {
+      const records = parseCSV(landscapeText.value);
+      const numFields = [
+        'Total Population','% White','% Black','% Latinx/e','% Asian','% Other',
+        'Overall Unemployment Rate - Men (%)','Overall Unemployment Rate - Women (%)',
+        'Black Unemployment Rate - Men (%)','Black Unemployment Rate - Women (%)',
+        'Minimum Wage ($)',
+        'Median Wage - All Workers Men ($)','Median Wage - All Workers Women ($)',
+        'Median Wage - Black Workers Men ($)','Median Wage - Black Workers Women ($)',
+        'Unionization Rate - Men (%)','Unionization Rate - Women (%)',
+      ];
+      records.forEach(r => {
+        Object.keys(r).forEach(k => {
+          if (numFields.includes(k) || k.includes('Employment Count') || k.includes('Wage Men') || k.includes('Wage Women') || k.includes('Wage ($)')) {
+            const n = parseFloat(r[k]);
+            r[k] = isNaN(n) ? null : n;
+          }
+        });
       });
-    });
+      ALL_STATES = records.filter(r => r['State']).sort((a,b)=>(a['State']||'').localeCompare(b['State']||''));
+    } else {
+      ALL_STATES = [];
+    }
 
-    ALL_STATES = records.filter(r => r['State']).sort((a,b)=>(a['State']||'').localeCompare(b['State']||''));
+    // ── POLICY DATA ──
+    if (policyText.status === 'fulfilled') {
+      const pRecords = parseCSV(policyText.value);
+      ALL_POLICY = pRecords.filter(r => r['Policy Name'] && r['Policy Name'].trim());
+    } else {
+      ALL_POLICY = [];
+    }
+
     document.getElementById('recCount').textContent = ALL_STATES.length + ' state' + (ALL_STATES.length!==1?'s':'') + ' submitted';
     buildStatePills();
     applyFilter();
+    renderPolicyTab();
     document.getElementById('loading').style.display='none';
     document.getElementById('dash').style.display='block';
     updateRefreshStamp();
@@ -715,21 +830,13 @@ async function loadData() {
     document.getElementById('recCount').textContent = '⚠ Data unavailable';
     const banner = document.createElement('div');
     banner.style.cssText = 'background:#fff3f0;border:1px solid #bf2d1a;color:#bf2d1a;padding:.7rem 1.2rem;font-family:DM Mono,monospace;font-size:.7rem;letter-spacing:.08em;margin-bottom:1rem';
-    banner.textContent = '⚠ Could not load data: ' + e.message + ' — Ecosystem tab is still available.';
+    banner.textContent = '⚠ Could not load data: ' + e.message;
     document.querySelector('.main').prepend(banner);
     ALL_STATES = [];
     FILTERED = [];
+    ALL_POLICY = [];
     buildStatePills();
   }
-}
-
-// ── REFRESH STAMP ──
-function updateRefreshStamp() {
-  const now = new Date();
-  const stamp = now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
-    + ' at ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-  const el = document.getElementById('footerUpdated');
-  if (el) el.textContent = 'Last refreshed: ' + stamp;
 }
 
 // ── FILTER ──
@@ -884,7 +991,7 @@ function renderMap() {
         const minW = stateData['Minimum Wage ($)'];
         const hasBWC = stateData['Has Black Worker Center?'];
         const hasCRO = stateData['Has Civil Rights Office?'];
-        const bwcName = stateData['BWC_Structured'] || '';
+        const bwcName = stateData['Black Worker Center Name & Contact'] || '';
         const bwcLine = hasBWC ? `✅ Black Worker Center${bwcName ? ': '+bwcName.split('\n')[0].substring(0,30) : ''}` : '❌ No Black Worker Center';
         const croLine = hasCRO ? '✅ Civil Rights Office' : '❌ No Civil Rights Office';
         tip.innerHTML = `<strong>${state}</strong><br>${party} state<br>Black unemp (M): ${fmt(bUnemp,'pct')}<br>Min wage: ${fmt(minW,'dollar')}/hr<br>${bwcLine}<br>${croLine}`;
@@ -1685,6 +1792,232 @@ function switchTab(name,el) {
   document.getElementById('tab-'+name).classList.add('active');
 }
 
+// ── REFRESH STAMP ──
+function updateRefreshStamp() {
+  const now = new Date();
+  const stamp = now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+    + ' at ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  const el = document.getElementById('footerUpdated');
+  if (el) el.textContent = 'Last refreshed: ' + stamp;
+}
+
+// ═══════════════════════════════════════
+// TAB 7: POLICY DATABASE
+// ═══════════════════════════════════════
+
+// Active filter state for policy tab
+let polFilters = { state: 'all', topic: 'all', status: 'all', ca: 'all' };
+
+const STATUS_CLASS = {
+  'active': 'pol-tag-status-active',
+  'passed': 'pol-tag-status-passed',
+  'failed': 'pol-tag-status-failed',
+  'proposed': 'pol-tag-status-proposed',
+  'introduced': 'pol-tag-status-proposed',
+  'pending': 'pol-tag-status-proposed',
+  'enacted': 'pol-tag-status-passed',
+  'defeated': 'pol-tag-status-failed',
+  'vetoed': 'pol-tag-status-failed',
+};
+
+function statusClass(s) {
+  if (!s) return 'pol-tag-status-other';
+  return STATUS_CLASS[s.toLowerCase().trim()] || 'pol-tag-status-other';
+}
+
+function isCAImport(entry) {
+  const v = (entry['CA Import Potential'] || '').toLowerCase();
+  return v.includes('yes') || v.includes('high') || v.includes('strong') || v.startsWith('y');
+}
+
+function getTopics(entry) {
+  const raw = entry['Topics'] || '';
+  return raw.split(/[,;|]/).map(t => t.trim()).filter(Boolean);
+}
+
+function renderPolicyTab() {
+  if (!ALL_POLICY.length) {
+    document.getElementById('policyHeroCards').innerHTML = '';
+    document.getElementById('policyCards').innerHTML = '';
+    document.getElementById('policyEmpty').style.display = 'block';
+    document.getElementById('policyEmpty').textContent = 'No policy entries submitted yet. Check back after Part 2 is due.';
+    return;
+  }
+
+  buildPolicyHero();
+  buildPolicyFilters();
+  renderPolicyCards();
+}
+
+function buildPolicyHero() {
+  const total = ALL_POLICY.length;
+  const states = new Set(ALL_POLICY.map(p => p['State']).filter(Boolean)).size;
+  const caCount = ALL_POLICY.filter(isCAImport).length;
+  const topics = new Set(ALL_POLICY.flatMap(getTopics)).size;
+
+  document.getElementById('policyHeroCards').innerHTML = `
+    <div class="scard"><div class="slabel">Total Policies</div><div class="sval">${total}</div><div class="stag">across all groups</div></div>
+    <div class="scard"><div class="slabel">States Covered</div><div class="sval">${states}</div><div class="stag">assigned jurisdictions</div></div>
+    <div class="scard"><div class="slabel">Topics</div><div class="sval">${topics}</div><div class="stag">distinct issue areas</div></div>
+    <div class="scard" style="border-top:3px solid var(--gold)"><div class="slabel">CA Import Potential</div><div class="sval" style="color:var(--gold)">${caCount}</div><div class="stag">flagged by groups</div></div>
+  `;
+}
+
+function buildPolicyFilters() {
+  // States
+  const states = [...new Set(ALL_POLICY.map(p => p['State']).filter(Boolean))].sort();
+  const stateEl = document.getElementById('polStateFilter');
+  stateEl.innerHTML = `<div class="pol-pill active" id="polState-all" onclick="setPolicyFilter('state','all')">All</div>`;
+  states.forEach(s => {
+    stateEl.innerHTML += `<div class="pol-pill" id="polState-${s.replace(/\s/g,'_')}" onclick="setPolicyFilter('state','${s}')">${s}</div>`;
+  });
+
+  // Topics
+  const allTopics = [...new Set(ALL_POLICY.flatMap(getTopics))].sort();
+  const topicEl = document.getElementById('polTopicFilter');
+  topicEl.innerHTML = `<div class="pol-pill active" id="polTopic-all" onclick="setPolicyFilter('topic','all')">All</div>`;
+  allTopics.forEach(t => {
+    const id = t.replace(/[^a-z0-9]/gi,'_');
+    topicEl.innerHTML += `<div class="pol-pill" id="polTopic-${id}" onclick="setPolicyFilter('topic','${t.replace(/'/g,"\\'")}')">${t}</div>`;
+  });
+
+  // Statuses
+  const allStatuses = [...new Set(ALL_POLICY.map(p => p['Status']).filter(Boolean))].sort();
+  const statusEl = document.getElementById('polStatusFilter');
+  statusEl.innerHTML = `<div class="pol-pill active" id="polStatus-all" onclick="setPolicyFilter('status','all')">All</div>`;
+  allStatuses.forEach(s => {
+    const id = s.replace(/[^a-z0-9]/gi,'_');
+    statusEl.innerHTML += `<div class="pol-pill" id="polStatus-${id}" onclick="setPolicyFilter('status','${s.replace(/'/g,"\\'")}')">${s}</div>`;
+  });
+
+  // CA filter starts on "all"
+  document.getElementById('polCA-all').classList.add('active');
+}
+
+function setPolicyFilter(dimension, value) {
+  polFilters[dimension] = value;
+
+  // Update pill active states for this dimension
+  const prefixes = { state: 'polState-', topic: 'polTopic-', status: 'polStatus-', ca: 'polCA-' };
+  const prefix = prefixes[dimension];
+  document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => {
+    el.classList.remove('active','ca-active');
+  });
+  const activeId = dimension === 'state'
+    ? `polState-${value.replace(/\s/g,'_')}`
+    : dimension === 'topic'
+    ? `polTopic-${value.replace(/[^a-z0-9]/gi,'_')}`
+    : dimension === 'status'
+    ? `polStatus-${value.replace(/[^a-z0-9]/gi,'_')}`
+    : `polCA-${value}`;
+  const activeEl = document.getElementById(activeId);
+  if (activeEl) activeEl.classList.add(dimension === 'ca' && value === 'yes' ? 'ca-active' : 'active');
+
+  renderPolicyCards();
+}
+
+function renderPolicyCards() {
+  const search = (document.getElementById('polSearch')?.value || '').toLowerCase();
+  const sort = document.getElementById('polSort')?.value || 'newest';
+
+  let results = ALL_POLICY.filter(p => {
+    if (polFilters.state !== 'all' && p['State'] !== polFilters.state) return false;
+    if (polFilters.topic !== 'all' && !getTopics(p).includes(polFilters.topic)) return false;
+    if (polFilters.status !== 'all' && (p['Status']||'').trim() !== polFilters.status) return false;
+    if (polFilters.ca === 'yes' && !isCAImport(p)) return false;
+    if (search) {
+      const haystack = [p['Policy Name'],p['Description'],p['Topics'],p['Advocates'],p['State'],p['Ripple Effect Notes']].join(' ').toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  if (sort === 'newest') {
+    results = results.slice().reverse(); // form submissions newest last in sheet = reverse
+  } else if (sort === 'state') {
+    results = results.slice().sort((a,b) => (a['State']||'').localeCompare(b['State']||''));
+  } else if (sort === 'status') {
+    results = results.slice().sort((a,b) => (a['Status']||'').localeCompare(b['Status']||''));
+  } else if (sort === 'ca') {
+    results = results.slice().sort((a,b) => (isCAImport(b)?1:0) - (isCAImport(a)?1:0));
+  }
+
+  FILTERED_POLICY = results;
+  const count = results.length;
+  document.getElementById('polResultsCount').textContent = `${count} polic${count===1?'y':'ies'} shown`;
+
+  const grid = document.getElementById('policyCards');
+  const empty = document.getElementById('policyEmpty');
+
+  if (!count) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = results.map(p => {
+    const name = p['Policy Name'] || '—';
+    const state = p['State'] || '—';
+    const desc = p['Description'] || '';
+    const status = p['Status'] || '';
+    const topics = getTopics(p);
+    const years = p['Years'] || p['Jurisdiction'] || '';
+    const ca = isCAImport(p);
+    const rippleNote = p['Ripple Effect Notes'] || '';
+    const caNote = p['CA Import Potential'] || '';
+    const source1 = p['Primary Sources'] || '';
+    const source2 = p['Secondary Sources'] || '';
+    const hearings = p['Hearing Links'] || '';
+    const submitter = p['Submitted By'] || '';
+
+    const stateIdx = ALL_STATES.findIndex(s => s['State'] === state);
+    const stateColor = stateIdx >= 0 ? color(stateIdx) : 'var(--black)';
+
+    const topicTags = topics.slice(0,3).map(t =>
+      `<span class="pol-tag pol-tag-topic">${t}</span>`
+    ).join('');
+    const statusTag = status ? `<span class="pol-tag ${statusClass(status)}">${status}</span>` : '';
+    const yearTag = years ? `<span class="pol-tag pol-tag-status-other">${years}</span>` : '';
+
+    const links = [
+      source1 ? `<a href="${source1}" target="_blank" rel="noopener">Primary Source ↗</a>` : '',
+      hearings ? `<a href="${hearings}" target="_blank" rel="noopener">Hearing ↗</a>` : '',
+    ].filter(Boolean).join('');
+
+    const noteBlock = (rippleNote || caNote) ? `
+      <div class="pol-card-note">
+        ${rippleNote ? `<strong>Ripple Effect:</strong> ${rippleNote}` : ''}
+        ${rippleNote && caNote ? '<br>' : ''}
+        ${caNote && ca ? `<strong>CA Import:</strong> ${caNote}` : ''}
+      </div>` : '';
+
+    return `<div class="pol-card ${ca ? 'ca-potential' : ''}">
+      <div class="pol-card-top">
+        <span class="pol-card-state" style="color:${stateColor}">${state}</span>
+        ${ca ? '<span class="pol-ca-badge">✦ CA Import</span>' : ''}
+      </div>
+      <div class="pol-card-name">${name}</div>
+      ${desc ? `<div class="pol-card-desc clamped" id="desc-${name.replace(/[^a-z0-9]/gi,'_')}">${desc}</div>
+        ${desc.length > 180 ? `<div class="pol-read-more" onclick="toggleDesc('${name.replace(/[^a-z0-9]/gi,'_')}',this)">Read more</div>` : ''}` : ''}
+      <div class="pol-card-meta">${statusTag}${topicTags}${yearTag}</div>
+      ${noteBlock}
+      <div class="pol-card-footer">
+        <div class="pol-card-links">${links}</div>
+        <span>${submitter ? 'by ' + submitter : ''}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDesc(id, btn) {
+  const el = document.getElementById('desc-' + id);
+  if (!el) return;
+  const clamped = el.classList.toggle('clamped');
+  btn.textContent = clamped ? 'Read more' : 'Read less';
+}
+
 // ── INIT ──
 loadData();
 </script>
@@ -1715,9 +2048,5 @@ loadData();
     <span class="ft-note" id="footerUpdated"></span>
   </div>
 </footer>
-
-<script>
-  // Timestamp is updated by loadData() on every refresh — see updateRefreshStamp()
-</script>
 </body>
 </html>
