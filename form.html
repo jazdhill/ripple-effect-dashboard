@@ -457,6 +457,29 @@ input.invalid, select.invalid, textarea.invalid { border-color:var(--red); }
           </div>
         </div>
 
+        <div class="field-group">
+          <label>Policy Topic(s) <span class="req">*</span>
+            <span class="hint">Select all that apply. This enables cross-state filtering in the dashboard — choose carefully.</span>
+          </label>
+          <div class="check-group" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem .8rem;margin-top:.4rem">
+            <label class="check-opt"><input type="checkbox" name="topics" value="Minimum Wage"> <span>Minimum Wage</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Wage Theft"> <span>Wage Theft</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Domestic Workers"> <span>Domestic Workers</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Gig / Independent Contractors"> <span>Gig / Independent Contractors</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Ban the Box / Justice-Impacted"> <span>Ban the Box / Justice-Impacted</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Paid Leave"> <span>Paid Leave</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Anti-Discrimination"> <span>Anti-Discrimination</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Collective Bargaining / Union Rights"> <span>Collective Bargaining / Union Rights</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Workforce Training"> <span>Workforce Training</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Occupational Safety"> <span>Occupational Safety</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Housing / Cost of Living"> <span>Housing / Cost of Living</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Healthcare / Benefits Access"> <span>Healthcare / Benefits Access</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Child / Dependent Care"> <span>Child / Dependent Care</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Reparations / Economic Justice"> <span>Reparations / Economic Justice</span></label>
+            <label class="check-opt"><input type="checkbox" name="topics" value="Other"> <span>Other</span></label>
+          </div>
+        </div>
+
         <div class="btn-row">
           <button class="btn-secondary" onclick="prevStep(1)">← Back</button>
           <button class="btn-primary" onclick="nextStep(1)">Continue to Actors →</button>
@@ -582,6 +605,32 @@ input.invalid, select.invalid, textarea.invalid { border-color:var(--red); }
             <span class="hint">Leave a trail for the next researcher. What should they do next? Specific FOIA requests, interviews to conduct, documents to find, time periods to investigate.</span>
           </label>
           <textarea id="f-nextsteps" class="tall" placeholder="e.g.&#10;- A FOIA request to [agency] could surface implementation data&#10;- Connect with [org] — they were key organizers and may have internal memos&#10;- Check the [year] session records for the committee vote breakdown&#10;- Interview [type of person] to understand why the bill stalled"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label>California Import Potential <span class="req">*</span>
+            <span class="hint">How transferable is this policy as a model for a California campaign? This is LABWC's most important filter for campaign selection.</span>
+          </label>
+          <div style="display:flex;flex-direction:column;gap:.8rem;margin-top:.4rem">
+            <label class="radio-opt" style="align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--cream);cursor:pointer">
+              <input type="radio" name="ripplePotential" value="Strong — direct model for CA" style="margin-top:.15rem;flex-shrink:0">
+              <span>
+                <strong>Strong</strong> — This is a direct model LABWC could run in California with minimal adaptation. The conditions, actors, and policy design map well onto CA context.
+              </span>
+            </label>
+            <label class="radio-opt" style="align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--cream);cursor:pointer">
+              <input type="radio" name="ripplePotential" value="Moderate — needs adaptation for CA" style="margin-top:.15rem;flex-shrink:0">
+              <span>
+                <strong>Moderate</strong> — Interesting model but would need meaningful adaptation for California's political or economic context. Explain what would need to change in your ripple effect notes.
+              </span>
+            </label>
+            <label class="radio-opt" style="align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--cream);cursor:pointer">
+              <input type="radio" name="ripplePotential" value="Limited — context-specific" style="margin-top:.15rem;flex-shrink:0">
+              <span>
+                <strong>Limited</strong> — This policy is highly context-specific (unique legal framework, political conditions, or demographics) and is unlikely to transfer directly. Still worth documenting as a data point.
+              </span>
+            </label>
+          </div>
         </div>
 
         <div class="btn-row">
@@ -713,6 +762,32 @@ function validateStep(step) {
     }
   }
 
+  // Topic tags: at least one required on step 1
+  if (step === 1) {
+    const checked = [...document.querySelectorAll('input[name="topics"]:checked')];
+    if (!checked.length) {
+      document.querySelector('.check-group').style.outline = '2px solid var(--red)';
+      ok = false;
+    } else {
+      document.querySelector('.check-group').style.outline = 'none';
+    }
+  }
+
+  // Ripple potential: required on step 4
+  if (step === 4) {
+    const rated = document.querySelector('input[name="ripplePotential"]:checked');
+    if (!rated) {
+      document.querySelectorAll('input[name="ripplePotential"]').forEach(r => {
+        r.closest('label').style.outline = '2px solid var(--red)';
+      });
+      ok = false;
+    } else {
+      document.querySelectorAll('input[name="ripplePotential"]').forEach(r => {
+        r.closest('label').style.outline = 'none';
+      });
+    }
+  }
+
   if (!ok) {
     const msg = 'Please fill in all required fields before continuing.';
     showStepError(step, msg);
@@ -772,6 +847,8 @@ function addLink(type) {
 function buildReview() {
   const namedLeg = document.querySelector('input[name="namedLeg"]:checked')?.value || '—';
   const namedCamp = document.querySelector('input[name="namedCampaign"]:checked')?.value || '—';
+  const topics = [...document.querySelectorAll('input[name="topics"]:checked')].map(c => c.value).join(', ') || '—';
+  const ripplePotential = document.querySelector('input[name="ripplePotential"]:checked')?.value || '—';
   const primarySources = [...document.querySelectorAll('#primaryLinks .p-url')].map((el,i) => {
     const desc = document.querySelectorAll('#primaryLinks .p-desc')[i]?.value || '';
     return el.value ? `${el.value}${desc ? ' — ' + desc : ''}` : null;
@@ -785,6 +862,7 @@ function buildReview() {
     ['State', document.getElementById('f-state').value],
     ['Submitted by', document.getElementById('f-submitter').value],
     ['Policy Name', document.getElementById('f-name').value],
+    ['Topic(s)', topics],
     ['Description', document.getElementById('f-desc').value],
     ['Years', document.getElementById('f-years').value],
     ['Jurisdiction', document.getElementById('f-jurisdiction').value],
@@ -799,6 +877,7 @@ function buildReview() {
     ['Secondary Sources', secondarySources.join('\n') || '—'],
     ['Hearing Links', document.getElementById('f-hearings').value || '—'],
     ['Ripple Effect Notes', document.getElementById('f-ripple').value],
+    ['CA Import Potential', ripplePotential],
     ['Public Commentary', document.getElementById('f-commentary').value || '—'],
     ['Research Recommendations', document.getElementById('f-nextsteps').value],
   ];
@@ -824,6 +903,8 @@ async function submitEntry() {
 
   const namedLeg = document.querySelector('input[name="namedLeg"]:checked')?.value || '';
   const namedCamp = document.querySelector('input[name="namedCampaign"]:checked')?.value || '';
+  const topics = [...document.querySelectorAll('input[name="topics"]:checked')].map(c => c.value).join(', ');
+  const ripplePotential = document.querySelector('input[name="ripplePotential"]:checked')?.value || '';
   const primarySources = [...document.querySelectorAll('#primaryLinks .p-url')].map((el,i) => {
     const desc = document.querySelectorAll('#primaryLinks .p-desc')[i]?.value || '';
     return el.value ? `${el.value}${desc ? ' — ' + desc : ''}` : null;
@@ -838,6 +919,7 @@ async function submitEntry() {
     state: document.getElementById('f-state').value,
     submitter: document.getElementById('f-submitter').value,
     policyName: document.getElementById('f-name').value,
+    topics,
     description: document.getElementById('f-desc').value,
     years: document.getElementById('f-years').value,
     jurisdiction: document.getElementById('f-jurisdiction').value,
@@ -852,6 +934,7 @@ async function submitEntry() {
     secondarySources,
     hearingLinks: document.getElementById('f-hearings').value,
     rippleEffect: document.getElementById('f-ripple').value,
+    ripplePotential,
     publicCommentary: document.getElementById('f-commentary').value,
     researchRecommendations: document.getElementById('f-nextsteps').value,
   };
@@ -903,7 +986,9 @@ function newEntry() {
   });
   document.getElementById('f-jurisdiction').value = '';
   document.getElementById('f-status').value = '';
-  document.querySelectorAll('input[name="namedLeg"], input[name="namedCampaign"]').forEach(r => r.checked = false);
+  document.querySelectorAll('input[name="namedLeg"], input[name="namedCampaign"], input[name="topics"], input[name="ripplePotential"]').forEach(r => r.checked = false);
+  document.querySelector('.check-group').style.outline = 'none';
+  document.querySelectorAll('input[name="ripplePotential"]').forEach(r => { r.closest('label').style.outline = 'none'; });
 
   // Reset link blocks
   document.getElementById('primaryLinks').innerHTML = `<div class="rep-block" id="pLink0">
