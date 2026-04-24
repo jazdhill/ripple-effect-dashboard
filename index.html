@@ -622,37 +622,38 @@ function fmtRatio(bw, aw) {
 function killChart(id) { if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];} }
 
 // ── LOAD ──
+// Full RFC-4180-compliant CSV parser: handles newlines inside quoted fields
 function parseCSV(text) {
-  const lines = text.split('\n');
-  const headers = parseCSVRow(lines[0]);
-  const records = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const vals = parseCSVRow(line);
-    const obj = {};
-    headers.forEach((h, j) => { obj[h] = vals[j] ?? ''; });
-    records.push(obj);
-  }
-  return records;
-}
-
-function parseCSVRow(row) {
-  const vals = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < row.length; i++) {
-    const c = row[i];
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const rows = [];
+  let cur = '', inQ = false, fields = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
     if (c === '"') {
-      if (inQ && row[i+1] === '"') { cur += '"'; i++; }
+      if (inQ && text[i+1] === '"') { cur += '"'; i++; }
       else inQ = !inQ;
     } else if (c === ',' && !inQ) {
-      vals.push(cur); cur = '';
+      fields.push(cur); cur = '';
+    } else if (c === '\n' && !inQ) {
+      fields.push(cur); cur = '';
+      rows.push(fields); fields = [];
     } else {
       cur += c;
     }
   }
-  vals.push(cur);
-  return vals;
+  fields.push(cur);
+  if (fields.some(f => f !== '')) rows.push(fields);
+  if (rows.length === 0) return [];
+  const headers = rows[0].map(h => h.trim());
+  const records = [];
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i];
+    if (!vals.length || (vals.length === 1 && !vals[0].trim())) continue;
+    const obj = {};
+    headers.forEach((h, j) => { obj[h] = (vals[j] ?? '').trim(); });
+    if (obj['State']) records.push(obj);
+  }
+  return records;
 }
 
 async function loadData() {
