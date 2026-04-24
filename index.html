@@ -594,6 +594,10 @@ function killChart(id) { if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
 async function loadData() {
   document.getElementById('loading').style.display='flex';
   document.getElementById('dash').style.display='none';
+
+  // Always render ecosystem immediately — it's embedded, no API needed
+  renderEcosystem();
+
   try {
     let records=[], offset=null;
     do {
@@ -612,7 +616,19 @@ async function loadData() {
     document.getElementById('loading').style.display='none';
     document.getElementById('dash').style.display='block';
   } catch(e) {
-    document.getElementById('loading').innerHTML=`<div class="empty-msg">⚠️ Could not load data.<br><small>${e.message}</small></div>`;
+    // Airtable failed — still show the dashboard so ecosystem is accessible
+    document.getElementById('loading').style.display='none';
+    document.getElementById('dash').style.display='block';
+    document.getElementById('recCount').textContent = '⚠ Data unavailable';
+    // Show error banner inside dash, above tabs
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:#fff3f0;border:1px solid #bf2d1a;color:#bf2d1a;padding:.7rem 1.2rem;font-family:DM Mono,monospace;font-size:.7rem;letter-spacing:.08em;margin-bottom:1rem';
+    banner.textContent = '⚠ Could not load Airtable data: ' + e.message + ' — Ecosystem tab is still available.';
+    document.querySelector('.main').prepend(banner);
+    // Ecosystem is already rendered above; other tabs will show empty state
+    ALL_STATES = [];
+    FILTERED = [];
+    buildStatePills();
   }
 }
 
@@ -1354,9 +1370,18 @@ function renderEcosystem() {
   renderEcoCards();
 }
 
+function getEcoStates() {
+  // If Airtable data is loaded, show only filtered states
+  // If not yet loaded, show all embedded states
+  if (ALL_STATES.length > 0) {
+    return FILTERED.map(s => ECO_DATA.find(e => e.state === s['State'])).filter(Boolean);
+  }
+  return ECO_DATA;
+}
+
 function renderEcoTable() {
   const tbl = document.getElementById('ecoTable');
-  const states = FILTERED.map(s => ECO_DATA.find(e => e.state === s['State'])).filter(Boolean);
+  const states = getEcoStates();
   if (!states.length) { tbl.innerHTML='<tr><td class="empty-msg">No ecosystem data for filtered states yet.</td></tr>'; return; }
 
   const typeCounts = s => {
@@ -1375,7 +1400,8 @@ function renderEcoTable() {
     <th>Legislative Archive</th>
     <th>Public Comment</th>
   </tr></thead><tbody>${states.map((s,i) => {
-    const idx = ALL_STATES.findIndex(st => st['State']===s.state);
+    const idx = ALL_STATES.length > 0 ? ALL_STATES.findIndex(st => st['State']===s.state) : i;
+    const stateColor = color(idx >= 0 ? idx : i);
     const tc = typeCounts(s);
     const orgPills = Object.entries(tc).map(([type,n]) => {
       const cls = type==='Union/Labor Coalition'?'eco-pill-blue':type==='Civil Rights/Racial Justice'?'eco-pill-red':type==='Worker Center'?'eco-pill-green':'eco-pill-gold';
@@ -1397,12 +1423,12 @@ function renderEcoTable() {
 
 function renderEcoCards() {
   const container = document.getElementById('ecoCards');
-  const states = FILTERED.map(s => ECO_DATA.find(e => e.state === s['State'])).filter(Boolean);
+  const states = getEcoStates();
   if (!states.length) { container.innerHTML='<div class="empty-msg">No ecosystem data for filtered states yet.</div>'; return; }
 
   container.innerHTML = states.map((s,i) => {
-    const idx = ALL_STATES.findIndex(st => st['State']===s.state);
-    const stateColor = color(idx);
+    const idx = ALL_STATES.length > 0 ? ALL_STATES.findIndex(st => st['State']===s.state) : i;
+    const stateColor = color(idx >= 0 ? idx : i);
 
     const orgCards = (s.notableOrgs||[]).map(o => `
       <div class="org-card ${orgTypeClass(o.type)}">
@@ -1494,6 +1520,7 @@ function toggleEcoCard(i) {
 
 
 // ── TAB SWITCH ──
+function switchTab(name,el) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
