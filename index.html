@@ -253,6 +253,41 @@ header {
 .bwc-block .bwc-label { font-size:.6rem; letter-spacing:.18em; text-transform:uppercase; font-family:'DM Mono',monospace; color:var(--gold); margin-bottom:.4rem; }
 .bwc-block .bwc-text { font-size:.8rem; line-height:1.6; white-space:pre-wrap; }
 
+/* ── ECO TOOLTIP (lawmaker name chips) ── */
+.lm-chip {
+  display:inline-flex; align-items:center; gap:.3rem;
+  background:var(--black); color:var(--white);
+  padding:.2rem .6rem; font-size:.62rem; font-family:'DM Mono',monospace;
+  margin:.15rem; cursor:default; position:relative; white-space:nowrap;
+}
+.lm-chip:hover .lm-tooltip {
+  opacity:1; pointer-events:auto; transform:translateY(0);
+}
+.lm-tooltip {
+  position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%) translateY(4px);
+  background:var(--black); color:var(--white); border:1px solid #333;
+  padding:.6rem .8rem; font-size:.7rem; font-family:'DM Sans',sans-serif;
+  line-height:1.5; width:240px; opacity:0; pointer-events:none;
+  transition:opacity .15s, transform .15s; z-index:500;
+  white-space:normal; text-align:left;
+}
+.lm-tooltip::after {
+  content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+  border:5px solid transparent; border-top-color:var(--black);
+}
+.lm-chip a { color:var(--gold); font-size:.62rem; }
+
+/* ── EXPAND TEXT (card view full text) ── */
+.eco-expandable { position:relative; }
+.eco-excerpt { }
+.eco-full { display:none; }
+.eco-expand-btn {
+  background:none; border:none; color:var(--red); font-size:.7rem;
+  font-family:'DM Mono',monospace; cursor:pointer; padding:0;
+  letter-spacing:.05em; margin-top:.3rem; display:block;
+}
+.eco-expand-btn:hover { text-decoration:underline; }
+
 /* ── FOOTER ── */
 .site-footer {
   background:var(--black); color:#555;
@@ -524,9 +559,7 @@ header {
 
 <script>
 // ── CONFIG ──
-const API_TOKEN = 'patlFHiXMk8JGwEzg.bd9f97b9eeec3597a624d2908201ee3b1f2f4df3dc4d1485d83da43e81bcca78';
-const BASE_ID   = 'appzWMklmNfDBJMRa';
-const TABLE_ID  = 'tblMduxdcjKxbHDtK';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1j93_HKgM7gNFPGZOcRqb19Smmcjkg3iusW7iifY8eBQ/pub?gid=824832318&single=true&output=csv';
 
 // Color palette — supports up to 50 states
 const PALETTE = [
@@ -568,12 +601,9 @@ const ELECTION_2020 = {
 };
 
 function getParty(s) {
-  const val = s['Red/Blue State (2020 Election)'];
-  if (val) {
-    const str = typeof val === 'object' ? val.name : String(val);
-    if (str.toLowerCase().includes('blue')) return 'Blue';
-    if (str.toLowerCase().includes('red')) return 'Red';
-  }
+  const val = String(s['Red/Blue State (2020 Election)'] || '').toLowerCase();
+  if (val.includes('blue')) return 'Blue';
+  if (val.includes('red')) return 'Red';
   return ELECTION_2020[s['State']] || '—';
 }
 
@@ -591,41 +621,86 @@ function fmtRatio(bw, aw) {
 function killChart(id) { if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];} }
 
 // ── LOAD ──
+function parseCSV(text) {
+  const lines = text.split('\n');
+  const headers = parseCSVRow(lines[0]);
+  const records = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const vals = parseCSVRow(line);
+    const obj = {};
+    headers.forEach((h, j) => { obj[h] = vals[j] ?? ''; });
+    records.push(obj);
+  }
+  return records;
+}
+
+function parseCSVRow(row) {
+  const vals = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < row.length; i++) {
+    const c = row[i];
+    if (c === '"') {
+      if (inQ && row[i+1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (c === ',' && !inQ) {
+      vals.push(cur); cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  vals.push(cur);
+  return vals;
+}
+
 async function loadData() {
   document.getElementById('loading').style.display='flex';
   document.getElementById('dash').style.display='none';
 
-  // Always render ecosystem immediately — it's embedded, no API needed
+  // Ecosystem renders immediately from embedded data — no fetch needed
   renderEcosystem();
 
   try {
-    let records=[], offset=null;
-    do {
-      const url = `https://api.airtable.com/v0/${BASE_ID}/${TABLE_ID}`+(offset?`?offset=${offset}`:'');
-      const res = await fetch(url,{headers:{Authorization:`Bearer ${API_TOKEN}`}});
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      records = records.concat(data.records.map(r=>r.fields));
-      offset = data.offset || null;
-    } while(offset);
+    const res = await fetch(SHEET_CSV_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const records = parseCSV(text);
 
-    ALL_STATES = records.sort((a,b)=>(a['State']||'').localeCompare(b['State']||''));
+    // Coerce numeric fields
+    const numFields = [
+      'Total Population','% White','% Black','% Latinx/e','% Asian','% Other',
+      'Overall Unemployment Rate - Men (%)','Overall Unemployment Rate - Women (%)',
+      'Black Unemployment Rate - Men (%)','Black Unemployment Rate - Women (%)',
+      'Minimum Wage ($)',
+      'Median Wage - All Workers Men ($)','Median Wage - All Workers Women ($)',
+      'Median Wage - Black Workers Men ($)','Median Wage - Black Workers Women ($)',
+      'Black Unionization Rate - Men (%)','Black Unionization Rate - Women (%)',
+    ];
+    // Also coerce all employment count and wage rank fields
+    records.forEach(r => {
+      Object.keys(r).forEach(k => {
+        if (numFields.includes(k) || k.includes('Employment Count') || k.includes('Wage Men') || k.includes('Wage Women') || k.includes('Wage ($)')) {
+          const n = parseFloat(r[k]);
+          r[k] = isNaN(n) ? null : n;
+        }
+      });
+    });
+
+    ALL_STATES = records.filter(r => r['State']).sort((a,b)=>(a['State']||'').localeCompare(b['State']||''));
     document.getElementById('recCount').textContent = ALL_STATES.length + ' state' + (ALL_STATES.length!==1?'s':'') + ' submitted';
     buildStatePills();
     applyFilter();
     document.getElementById('loading').style.display='none';
     document.getElementById('dash').style.display='block';
   } catch(e) {
-    // Airtable failed — still show the dashboard so ecosystem is accessible
     document.getElementById('loading').style.display='none';
     document.getElementById('dash').style.display='block';
     document.getElementById('recCount').textContent = '⚠ Data unavailable';
-    // Show error banner inside dash, above tabs
     const banner = document.createElement('div');
     banner.style.cssText = 'background:#fff3f0;border:1px solid #bf2d1a;color:#bf2d1a;padding:.7rem 1.2rem;font-family:DM Mono,monospace;font-size:.7rem;letter-spacing:.08em;margin-bottom:1rem';
-    banner.textContent = '⚠ Could not load Airtable data: ' + e.message + ' — Ecosystem tab is still available.';
+    banner.textContent = '⚠ Could not load data: ' + e.message + ' — Ecosystem tab is still available.';
     document.querySelector('.main').prepend(banner);
-    // Ecosystem is already rendered above; other tabs will show empty state
     ALL_STATES = [];
     FILTERED = [];
     buildStatePills();
@@ -1382,7 +1457,7 @@ function getEcoStates() {
 function renderEcoTable() {
   const tbl = document.getElementById('ecoTable');
   const states = getEcoStates();
-  if (!states.length) { tbl.innerHTML='<tr><td class="empty-msg">No ecosystem data for filtered states yet.</td></tr>'; return; }
+  if (!states.length) { tbl.innerHTML='<tr><td class="empty-msg">No ecosystem data yet.</td></tr>'; return; }
 
   const typeCounts = s => {
     const types = {};
@@ -1390,15 +1465,18 @@ function renderEcoTable() {
     return types;
   };
 
+  const lawmakerChips = (lms) => (lms||[]).map(l => {
+    const shortName = l.name.replace(/^(Senator|Representative|Rep\.|Sen\.)\s*/i,'').split(' ').slice(0,2).join(' ');
+    const bills = l.bills && l.bills.length ? l.bills[0].substring(0,200) : '';
+    const link = l.url ? `<a href="${l.url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);margin-left:.2rem">\u2197</a>` : '';
+    return `<span class="lm-chip">${shortName}${link}<span class="lm-tooltip"><strong>${l.name}</strong>${bills?'<br><br>'+bills:''}</span></span>`;
+  }).join('');
+
   tbl.innerHTML = `<thead><tr>
-    <th>State</th>
-    <th>BWC</th>
-    <th>Civil Rights Office</th>
-    <th>Orgs</th>
-    <th>Lawmakers</th>
-    <th>Black Press</th>
-    <th>Legislative Archive</th>
-    <th>Public Comment</th>
+    <th>State</th><th>BWC</th><th>Civil Rights Office</th>
+    <th>Organizations</th><th>Lawmakers</th>
+    <th>Black Press</th><th>Labor Journalism</th>
+    <th>Policy Research</th><th>Archives</th>
   </tr></thead><tbody>${states.map((s,i) => {
     const idx = ALL_STATES.length > 0 ? ALL_STATES.findIndex(st => st['State']===s.state) : i;
     const stateColor = color(idx >= 0 ? idx : i);
@@ -1408,110 +1486,99 @@ function renderEcoTable() {
       const short = type==='Union/Labor Coalition'?'Union':type==='Civil Rights/Racial Justice'?'Civil Rights':type==='Worker Center'?'Worker Ctr':'Research';
       return `<span class="eco-pill ${cls}">${n} ${short}</span>`;
     }).join('');
+    const researchOrgs = (s.notableOrgs||[]).filter(o=>o.type==='Policy Research Institute');
+    const labourJourn = (s.laborJournalism||[]).filter(p=>p.url&&p.name&&p.name!=='Link:');
     return `<tr>
-      <td><span class="eco-state-name" style="color:${color(idx)}">${s.state}</span></td>
-      <td>${s.hasBWC?'<span class="eco-pill eco-pill-green">✓ Yes</span>':'<span class="eco-pill eco-pill-red">✗ No</span>'}</td>
-      <td>${s.hasCRO?'<span class="eco-pill eco-pill-green">✓ Yes</span>':'<span class="eco-pill eco-pill-red">✗ No</span>'}</td>
-      <td><span class="eco-count">${s.notableOrgs.length}</span><br><div style="margin-top:.3rem">${orgPills}</div></td>
-      <td><span class="eco-count">${s.progressiveLawmakers.length} identified</span></td>
-      <td><span class="eco-count">${s.blackPress.length} outlet${s.blackPress.length!==1?'s':''}</span>${s.blackPress.map(p=>`<br><a class="eco-link" href="${p.url}" target="_blank">${p.name||p.url}</a>`).join('')}</td>
-      <td>${s.legislativeArchive.url?`<a class="eco-link" href="${s.legislativeArchive.url}" target="_blank">↗ Archive</a>`:'—'}</td>
-      <td>${s.publicComment.url?`<a class="eco-link" href="${s.publicComment.url}" target="_blank">↗ Hearings</a>`:'—'}</td>
+      <td><span class="eco-state-name" style="color:${stateColor}">${s.state}</span></td>
+      <td>${s.hasBWC?'<span class="eco-pill eco-pill-green">\u2713 Yes</span>':'<span class="eco-pill eco-pill-red">\u2717 No</span>'}</td>
+      <td>${s.hasCRO?'<span class="eco-pill eco-pill-green">\u2713 Yes</span>':'<span class="eco-pill eco-pill-red">\u2717 No</span>'}</td>
+      <td><div style="margin-bottom:.3rem">${orgPills}</div><span class="eco-count">${s.notableOrgs.length} total</span></td>
+      <td style="min-width:200px">${lawmakerChips(s.progressiveLawmakers)}</td>
+      <td>${(s.blackPress||[]).filter(p=>p.url).map(p=>`<a class="eco-link" href="${p.url}" target="_blank">${p.name||'\u2197'}</a>`).join('<br>')||'\u2014'}</td>
+      <td>${labourJourn.length?labourJourn.map(p=>`<a class="eco-link" href="${p.url}" target="_blank">${p.name.replace(':','').trim()}</a>`).join('<br>'):'\u2014'}</td>
+      <td>${researchOrgs.length?researchOrgs.map(o=>`<a class="eco-link" href="${o.url}" target="_blank">${o.name.split('(')[0].trim()}</a>`).join('<br>'):'\u2014'}</td>
+      <td>
+        ${s.legislativeArchive.url?`<a class="eco-link" href="${s.legislativeArchive.url}" target="_blank">Legislature \u2197</a><br>`:''}
+        ${s.publicComment.url?`<a class="eco-link" href="${s.publicComment.url}" target="_blank">Hearings \u2197</a>`:''}
+      </td>
     </tr>`;
   }).join('')}</tbody>`;
+}
+
+function expandText(btn) {
+  const wrap = btn.closest('.eco-expandable');
+  const excerpt = wrap.querySelector('.eco-excerpt');
+  const full = wrap.querySelector('.eco-full');
+  const isOpen = full.style.display === 'block';
+  full.style.display = isOpen ? 'none' : 'block';
+  excerpt.style.display = isOpen ? 'block' : 'none';
+  btn.textContent = isOpen ? '+ Read more' : '\u2014 Show less';
+}
+
+function expandableText(text, limit) {
+  limit = limit || 180;
+  if (!text || text.length <= limit) return '<span>' + (text||'') + '</span>';
+  return '<div class="eco-expandable"><span class="eco-excerpt">' + text.substring(0,limit) + '\u2026</span><span class="eco-full" style="display:none">' + text + '</span><button class="eco-expand-btn" onclick="expandText(this)">+ Read more</button></div>';
 }
 
 function renderEcoCards() {
   const container = document.getElementById('ecoCards');
   const states = getEcoStates();
-  if (!states.length) { container.innerHTML='<div class="empty-msg">No ecosystem data for filtered states yet.</div>'; return; }
+  if (!states.length) { container.innerHTML='<div class="empty-msg">No ecosystem data yet.</div>'; return; }
 
   container.innerHTML = states.map((s,i) => {
     const idx = ALL_STATES.length > 0 ? ALL_STATES.findIndex(st => st['State']===s.state) : i;
     const stateColor = color(idx >= 0 ? idx : i);
 
-    const orgCards = (s.notableOrgs||[]).map(o => `
-      <div class="org-card ${orgTypeClass(o.type)}">
-        <div class="org-type-badge">${o.type}</div>
-        <div class="org-name">${o.name}</div>
-        ${o.description ? `<div class="org-desc">${o.description.substring(0,180)}${o.description.length>180?'…':''}</div>` : ''}
-        ${o.url ? `<a class="org-link" href="${o.url}" target="_blank">↗ Visit</a>` : ''}
-      </div>`).join('');
+    const orgCards = (s.notableOrgs||[]).map(o =>
+      '<div class="org-card ' + orgTypeClass(o.type) + '">' +
+      '<div class="org-type-badge">' + o.type + '</div>' +
+      '<div class="org-name">' + o.name + '</div>' +
+      (o.description ? '<div class="org-desc">' + expandableText(o.description, 160) + '</div>' : '') +
+      (o.url ? '<a class="org-link" href="' + o.url + '" target="_blank">\u2197 Visit</a>' : '') +
+      '</div>').join('');
 
-    const lawmakerCards = (s.progressiveLawmakers||[]).map(l => `
-      <div class="lawmaker-card">
-        <div class="lawmaker-name">${l.name}</div>
-        ${l.bills && l.bills.length ? `<div class="lawmaker-bills">${l.bills[0].substring(0,200)}${l.bills[0].length>200?'…':''}</div>` : ''}
-        ${l.url ? `<a class="lawmaker-link" href="${l.url}" target="_blank">↗ Profile</a>` : ''}
-      </div>`).join('');
+    const lawmakerCards = (s.progressiveLawmakers||[]).map(l =>
+      '<div class="lawmaker-card">' +
+      '<div class="lawmaker-name">' + l.name + '</div>' +
+      (l.bills && l.bills.length ? '<div class="lawmaker-bills">' + expandableText(l.bills[0], 180) + '</div>' : '') +
+      (l.url ? '<a class="lawmaker-link" href="' + l.url + '" target="_blank">\u2197 Profile</a>' : '') +
+      '</div>').join('');
 
     const mediaItems = [
-      ...s.blackPress.map(p => ({label:'Black Press', ...p})),
-      ...s.laborJournalism.map(p => ({label:'Labor Journalism', ...p})),
-      ...(s.majorNewspaper||[]).map(p => ({label:'Major Newspaper', ...p})),
-    ].filter(p => p.url).map(p => `
-      <div class="media-item">
-        <div class="media-label">${p.label}</div>
-        <div class="media-name">${p.name && p.name !== 'Link:' ? p.name : ''}</div>
-        <a class="media-link" href="${p.url}" target="_blank">${p.url.replace('https://','').replace('http://','').split('/')[0]}</a>
-      </div>`).join('');
+      ...(s.blackPress||[]).map(p=>({label:'Black Press',...p})),
+      ...(s.laborJournalism||[]).map(p=>({label:'Labor Journalism',...p})),
+      ...(s.majorNewspaper||[]).map(p=>({label:'Major Newspaper',...p})),
+    ].filter(p=>p.url&&p.name&&p.name!=='Link:').map(p=>
+      '<div class="media-item"><div class="media-label">' + p.label + '</div>' +
+      '<div class="media-name">' + p.name + '</div>' +
+      '<a class="media-link" href="' + p.url + '" target="_blank">' + p.url.replace(/https?:\/\//,'').split('/')[0] + '</a></div>'
+    ).join('');
 
-    return `<div class="eco-card" id="ecoCard${i}">
-      <div class="eco-card-header" onclick="toggleEcoCard(${i})">
-        <div>
-          <div style="font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;font-family:'DM Mono',monospace;color:${stateColor};margin-bottom:.2rem">State Profile</div>
-          <div class="eco-card-title">${s.state}</div>
-        </div>
-        <div class="eco-card-meta">
-          ${s.hasBWC?'<span class="eco-pill eco-pill-green">BWC</span>':'<span class="eco-pill eco-pill-red">No BWC</span>'}
-          ${s.hasCRO?'<span class="eco-pill eco-pill-blue">Civil Rights Office</span>':''}
-          <span class="eco-pill eco-pill-gold">${s.notableOrgs.length} Orgs</span>
-          <span class="eco-pill eco-pill-gold">${s.progressiveLawmakers.length} Lawmakers</span>
-          <span class="eco-card-chevron">▾</span>
-        </div>
-      </div>
-      <div class="eco-card-body">
-        ${s.hasBWC && s.bwcContact ? `
-          <div class="eco-section">
-            <div class="eco-section-title">Black Worker Center</div>
-            <div class="bwc-block">
-              <div class="bwc-label">Contact & Location</div>
-              <div class="bwc-text">${s.bwcContact}</div>
-            </div>
-          </div>` : ''}
-
-        <div class="eco-section">
-          <div class="eco-section-title">Notable Organizations (${s.notableOrgs.length})</div>
-          <div class="org-grid">${orgCards}</div>
-        </div>
-
-        <div class="eco-section">
-          <div class="eco-section-title">Progressive Lawmakers (${s.progressiveLawmakers.length})</div>
-          <div class="lawmaker-list">${lawmakerCards}</div>
-        </div>
-
-        <div class="eco-section">
-          <div class="eco-section-title">Media & Research Resources</div>
-          <div class="media-grid">${mediaItems}</div>
-        </div>
-
-        <div class="eco-section">
-          <div class="eco-section-title">Legislative & Hearing Archives</div>
-          <div style="display:flex;gap:1rem;flex-wrap:wrap">
-            ${s.legislativeArchive.url ? `<a class="btn" href="${s.legislativeArchive.url}" target="_blank" style="text-decoration:none;display:inline-block;background:var(--black);color:var(--white);padding:.4rem .9rem;font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase">↗ Legislative Archive</a>` : ''}
-            ${s.publicComment.url ? `<a class="btn" href="${s.publicComment.url}" target="_blank" style="text-decoration:none;display:inline-block;background:var(--black);color:var(--white);padding:.4rem .9rem;font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase">↗ Hearing Archive</a>` : ''}
-          </div>
-          ${s.publicComment.note && s.publicComment.note.length > s.publicComment.url.length + 10 ? `<div style="margin-top:.6rem;font-size:.75rem;color:var(--muted);line-height:1.5">${s.publicComment.note.replace(/https?:\/\/\S+/g,'').trim()}</div>` : ''}
-        </div>
-
-        ${s.dataGaps ? `<div class="eco-section">
-          <div class="eco-section-title">Data Gaps & Notes</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.6;background:var(--cream);padding:.8rem 1rem">${s.dataGaps}</div>
-        </div>` : ''}
-      </div>
-    </div>`;
+    return '<div class="eco-card" id="ecoCard' + i + '">' +
+      '<div class="eco-card-header" onclick="toggleEcoCard(' + i + ')">' +
+      '<div><div style="font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;font-family:DM Mono,monospace;color:' + stateColor + ';margin-bottom:.2rem">State Profile</div>' +
+      '<div class="eco-card-title">' + s.state + '</div></div>' +
+      '<div class="eco-card-meta">' +
+      (s.hasBWC?'<span class="eco-pill eco-pill-green">BWC</span>':'<span class="eco-pill eco-pill-red">No BWC</span>') +
+      (s.hasCRO?'<span class="eco-pill eco-pill-blue">Civil Rights Office</span>':'') +
+      '<span class="eco-pill eco-pill-gold">' + s.notableOrgs.length + ' Orgs</span>' +
+      '<span class="eco-pill eco-pill-gold">' + s.progressiveLawmakers.length + ' Lawmakers</span>' +
+      '<span class="eco-card-chevron">\u25be</span></div></div>' +
+      '<div class="eco-card-body">' +
+      (s.hasBWC && s.bwcContact ? '<div class="eco-section"><div class="eco-section-title">Black Worker Center</div><div class="bwc-block"><div class="bwc-label">Contact & Location</div><div class="bwc-text">' + s.bwcContact + '</div></div></div>' : '') +
+      '<div class="eco-section"><div class="eco-section-title">Notable Organizations (' + s.notableOrgs.length + ')</div><div class="org-grid">' + orgCards + '</div></div>' +
+      '<div class="eco-section"><div class="eco-section-title">Progressive Lawmakers (' + s.progressiveLawmakers.length + ')</div><div class="lawmaker-list">' + lawmakerCards + '</div></div>' +
+      '<div class="eco-section"><div class="eco-section-title">Media & Research Resources</div><div class="media-grid">' + mediaItems + '</div></div>' +
+      '<div class="eco-section"><div class="eco-section-title">Legislative & Hearing Archives</div><div style="display:flex;gap:1rem;flex-wrap:wrap">' +
+      (s.legislativeArchive.url?'<a class="btn" href="' + s.legislativeArchive.url + '" target="_blank" style="text-decoration:none;display:inline-block;background:var(--black);color:var(--white);padding:.4rem .9rem;font-family:DM Mono,monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase">\u2197 Legislature</a>':'') +
+      (s.publicComment.url?'<a class="btn" href="' + s.publicComment.url + '" target="_blank" style="text-decoration:none;display:inline-block;background:var(--black);color:var(--white);padding:.4rem .9rem;font-family:DM Mono,monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase">\u2197 Hearings</a>':'') +
+      '</div></div>' +
+      (s.dataGaps?'<div class="eco-section"><div class="eco-section-title">Data Gaps & Notes</div><div style="font-size:.8rem;color:var(--muted);line-height:1.6;background:var(--cream);padding:.8rem 1rem">' + s.dataGaps + '</div></div>':'') +
+      '</div></div>';
   }).join('');
 }
+
 
 function toggleEcoCard(i) {
   document.getElementById('ecoCard'+i).classList.toggle('open');
