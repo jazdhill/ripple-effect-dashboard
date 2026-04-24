@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ripple Effect — Policy Entry Form</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black: #0d0d0d;
+  --white: #f4efe6;
+  --cream: #ebe5d8;
+  --red: #bf2d1a;
+  --blue: #2a4d8f;
+  --gold: #c9993a;
+  --green: #2a6044;
+  --muted: #7a7060;
+  --border: rgba(13,13,13,0.12);
+  --panel: #ffffff;
+  --input-bg: #faf8f4;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { background:var(--white); color:var(--black); font-family:'DM Sans',sans-serif; font-size:14px; min-height:100vh; }
+
+/* ── HEADER ── */
+header {
+  background:var(--black); color:var(--white);
+  padding:1.2rem 2.5rem;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:3px solid var(--red);
+}
+.logo h1 { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:.05em; line-height:1; }
+.logo p { font-size:.65rem; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); margin-top:.2rem; font-family:'DM Mono',monospace; }
+.header-badge { font-family:'DM Mono',monospace; font-size:.65rem; letter-spacing:.1em; text-transform:uppercase; color:#555; border:1px solid #333; padding:.3rem .8rem; }
+
+/* ── AUTH GATE ── */
+#authGate {
+  min-height:calc(100vh - 70px);
+  display:flex; align-items:center; justify-content:center;
+  background:var(--white);
+}
+.auth-box {
+  background:var(--panel); border:1px solid var(--border);
+  padding:3rem 2.5rem; max-width:400px; width:100%;
+  text-align:center;
+}
+.auth-box .auth-icon { font-size:2rem; margin-bottom:1rem; }
+.auth-box h2 { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:.04em; margin-bottom:.4rem; }
+.auth-box p { font-size:.82rem; color:var(--muted); margin-bottom:1.8rem; line-height:1.6; }
+.auth-error { color:var(--red); font-size:.78rem; font-family:'DM Mono',monospace; margin-top:.6rem; display:none; }
+
+/* ── MAIN FORM LAYOUT ── */
+#formApp { display:none; }
+
+.form-layout {
+  display:grid; grid-template-columns:220px 1fr;
+  min-height:calc(100vh - 70px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background:var(--black); color:var(--white);
+  padding:2rem 0; position:sticky; top:0; height:calc(100vh - 70px);
+  overflow-y:auto;
+}
+.sidebar-state {
+  padding:0 1.5rem 1.5rem;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  margin-bottom:1rem;
+}
+.sidebar-state .slabel { font-size:.6rem; letter-spacing:.2em; text-transform:uppercase; color:#666; font-family:'DM Mono',monospace; margin-bottom:.3rem; }
+.sidebar-state .sname { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:.04em; color:var(--gold); }
+.sidebar-state .sgroup { font-size:.72rem; color:#555; font-family:'DM Mono',monospace; margin-top:.2rem; }
+
+.nav-step {
+  display:flex; align-items:center; gap:.8rem;
+  padding:.7rem 1.5rem; cursor:pointer;
+  transition:background .15s; border-left:3px solid transparent;
+  font-size:.78rem; font-weight:500; color:#666;
+}
+.nav-step:hover { background:rgba(255,255,255,.04); color:#aaa; }
+.nav-step.active { background:rgba(255,255,255,.06); color:var(--white); border-left-color:var(--red); }
+.nav-step.complete { color:var(--green); }
+.nav-step.complete .step-num { background:var(--green); color:white; }
+.step-num {
+  width:22px; height:22px; border-radius:50%;
+  background:rgba(255,255,255,.08); color:#666;
+  font-family:'DM Mono',monospace; font-size:.6rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.nav-step.active .step-num { background:var(--red); color:white; }
+.step-label { font-size:.72rem; }
+
+.sidebar-entries {
+  padding:1.5rem 1.5rem .5rem;
+  border-top:1px solid rgba(255,255,255,.08);
+  margin-top:1rem;
+}
+.sidebar-entries .slabel { font-size:.6rem; letter-spacing:.2em; text-transform:uppercase; color:#555; font-family:'DM Mono',monospace; margin-bottom:.6rem; }
+.entry-chip {
+  background:rgba(255,255,255,.06); padding:.35rem .7rem;
+  font-size:.68rem; font-family:'DM Mono',monospace; color:#888;
+  margin-bottom:.3rem; border-left:2px solid var(--gold);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  cursor:default;
+}
+
+/* ── CONTENT AREA ── */
+.content-area { padding:2.5rem 3rem; max-width:820px; }
+
+.step-panel { display:none; }
+.step-panel.active { display:block; }
+
+/* ── SECTION HEADER ── */
+.step-header { margin-bottom:2rem; }
+.step-tag { font-size:.62rem; letter-spacing:.2em; text-transform:uppercase; color:var(--red); font-family:'DM Mono',monospace; font-weight:600; margin-bottom:.25rem; }
+.step-title { font-family:'Bebas Neue',sans-serif; font-size:2rem; letter-spacing:.04em; margin-bottom:.4rem; }
+.step-desc { font-size:.84rem; color:var(--muted); line-height:1.6; max-width:580px; }
+
+/* ── FORM ELEMENTS ── */
+.field-group { margin-bottom:1.5rem; }
+.field-row { display:grid; gap:1rem; margin-bottom:1.5rem; }
+.field-row.two { grid-template-columns:1fr 1fr; }
+.field-row.three { grid-template-columns:1fr 1fr 1fr; }
+
+label {
+  display:block; font-size:.68rem; letter-spacing:.12em; text-transform:uppercase;
+  font-family:'DM Mono',monospace; color:var(--muted); font-weight:500;
+  margin-bottom:.4rem;
+}
+label .req { color:var(--red); margin-left:.2rem; }
+label .hint { display:block; font-size:.65rem; letter-spacing:.04em; text-transform:none; color:#aaa9a0; margin-top:.15rem; font-weight:400; font-style:italic; }
+
+input[type=text], input[type=url], input[type=password], select, textarea {
+  width:100%; padding:.7rem .9rem;
+  background:var(--input-bg); border:1.5px solid var(--border);
+  font-family:'DM Sans',sans-serif; font-size:.84rem; color:var(--black);
+  transition:border-color .15s; outline:none; appearance:none;
+}
+input[type=text]:focus, input[type=url]:focus, input[type=password]:focus,
+select:focus, textarea:focus {
+  border-color:var(--black);
+  background:white;
+}
+textarea { resize:vertical; min-height:100px; line-height:1.6; }
+textarea.tall { min-height:160px; }
+textarea.xtall { min-height:220px; }
+
+select { cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7060' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .8rem center; padding-right:2rem; }
+
+.radio-group, .check-group { display:flex; gap:1rem; flex-wrap:wrap; margin-top:.3rem; }
+.radio-opt, .check-opt { display:flex; align-items:center; gap:.5rem; cursor:pointer; }
+.radio-opt input, .check-opt input { width:16px; height:16px; accent-color:var(--red); cursor:pointer; }
+.radio-opt span, .check-opt span { font-size:.82rem; }
+
+.field-divider { border:none; border-top:1px solid var(--border); margin:2rem 0; }
+
+/* ── REPEATABLE BLOCKS ── */
+.rep-block {
+  background:var(--cream); padding:1.2rem 1.4rem; margin-bottom:1rem;
+  border-left:3px solid var(--border); position:relative;
+}
+.rep-block .rep-title {
+  font-size:.65rem; letter-spacing:.15em; text-transform:uppercase;
+  font-family:'DM Mono',monospace; color:var(--muted); margin-bottom:1rem;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.rep-remove {
+  background:none; border:none; color:var(--red); cursor:pointer;
+  font-size:.7rem; font-family:'DM Mono',monospace; letter-spacing:.08em;
+  text-transform:uppercase; padding:.2rem .4rem;
+}
+.rep-remove:hover { text-decoration:underline; }
+.add-btn {
+  display:flex; align-items:center; gap:.5rem;
+  background:none; border:1.5px dashed var(--border);
+  padding:.7rem 1rem; cursor:pointer; color:var(--muted);
+  font-size:.75rem; font-family:'DM Mono',monospace; letter-spacing:.08em;
+  text-transform:uppercase; width:100%; transition:all .15s;
+  margin-top:.5rem;
+}
+.add-btn:hover { border-color:var(--black); color:var(--black); }
+
+/* ── BUTTONS ── */
+.btn-row { display:flex; align-items:center; gap:1rem; margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--border); }
+.btn-primary {
+  background:var(--black); color:var(--white);
+  border:none; padding:.75rem 2rem;
+  font-family:'DM Mono',monospace; font-size:.72rem; letter-spacing:.12em;
+  text-transform:uppercase; cursor:pointer; transition:background .15s;
+}
+.btn-primary:hover { background:var(--red); }
+.btn-secondary {
+  background:transparent; color:var(--muted);
+  border:1.5px solid var(--border); padding:.75rem 1.5rem;
+  font-family:'DM Mono',monospace; font-size:.72rem; letter-spacing:.12em;
+  text-transform:uppercase; cursor:pointer; transition:all .15s;
+}
+.btn-secondary:hover { border-color:var(--black); color:var(--black); }
+.btn-submit {
+  background:var(--green); color:white;
+  border:none; padding:.85rem 2.5rem;
+  font-family:'DM Mono',monospace; font-size:.75rem; letter-spacing:.12em;
+  text-transform:uppercase; cursor:pointer; transition:background .15s;
+}
+.btn-submit:hover { background:#1f4d34; }
+.btn-submit:disabled { background:#aaa; cursor:not-allowed; }
+.btn-new {
+  background:var(--gold); color:var(--black);
+  border:none; padding:.75rem 2rem;
+  font-family:'DM Mono',monospace; font-size:.72rem; letter-spacing:.12em;
+  text-transform:uppercase; cursor:pointer; transition:background .15s;
+}
+.btn-new:hover { background:#b8872a; }
+
+/* ── REVIEW PANEL ── */
+.review-card { background:var(--cream); padding:1.4rem; margin-bottom:1rem; }
+.review-card .rc-title { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:.04em; margin-bottom:.8rem; color:var(--black); }
+.review-row { display:flex; gap:1rem; margin-bottom:.5rem; font-size:.8rem; }
+.review-key { font-family:'DM Mono',monospace; font-size:.68rem; color:var(--muted); min-width:160px; flex-shrink:0; }
+.review-val { color:var(--black); line-height:1.5; }
+
+/* ── SUCCESS STATE ── */
+.success-screen {
+  text-align:center; padding:4rem 2rem; display:none;
+}
+.success-icon { font-size:3rem; margin-bottom:1.5rem; }
+.success-screen h2 { font-family:'Bebas Neue',sans-serif; font-size:2.2rem; letter-spacing:.04em; margin-bottom:.6rem; }
+.success-screen p { font-size:.88rem; color:var(--muted); line-height:1.7; max-width:480px; margin:0 auto 2rem; }
+.entry-count-badge {
+  display:inline-block; background:var(--black); color:var(--gold);
+  font-family:'DM Mono',monospace; font-size:.72rem; letter-spacing:.1em;
+  padding:.4rem 1rem; margin-bottom:2rem;
+}
+
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  height:3px; background:var(--cream);
+  position:sticky; top:0; z-index:100;
+}
+.progress-fill { height:100%; background:var(--red); transition:width .4s ease; }
+
+/* ── VALIDATION ── */
+.field-error { color:var(--red); font-size:.7rem; font-family:'DM Mono',monospace; margin-top:.3rem; display:none; }
+input.invalid, select.invalid, textarea.invalid { border-color:var(--red); }
+
+@media(max-width:900px) {
+  .form-layout { grid-template-columns:1fr; }
+  .sidebar { position:static; height:auto; display:flex; gap:0; padding:1rem 0; overflow-x:auto; flex-direction:row; flex-wrap:nowrap; }
+  .sidebar-state, .sidebar-entries { display:none; }
+  .nav-step { padding:.5rem 1rem; flex-direction:column; gap:.2rem; text-align:center; white-space:nowrap; }
+  .content-area { padding:1.5rem; }
+  .field-row.two, .field-row.three { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <h1>The Color of Work</h1>
+    <p>Ripple Effect Project · Policy Entry Form</p>
+  </div>
+  <div class="header-badge">Part 2 — Policy Database</div>
+</header>
+
+<!-- AUTH GATE -->
+<div id="authGate">
+  <div class="auth-box">
+    <div class="auth-icon">🔐</div>
+    <h2>Enter Access Code</h2>
+    <p>This form is for enrolled students only. Enter the class access code provided in your syllabus or course site.</p>
+    <div style="margin-bottom:.8rem">
+      <input type="password" id="pwInput" placeholder="Access code" style="text-align:center;letter-spacing:.2em;font-family:'DM Mono',monospace" onkeydown="if(event.key==='Enter')checkAuth()">
+    </div>
+    <button class="btn-primary" onclick="checkAuth()" style="width:100%">Enter →</button>
+    <div class="auth-error" id="authError">Incorrect access code. Try again.</div>
+  </div>
+</div>
+
+<!-- MAIN FORM APP -->
+<div id="formApp">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+  <div class="form-layout">
+
+    <!-- SIDEBAR NAV -->
+    <div class="sidebar">
+      <div class="sidebar-state">
+        <div class="slabel">Current Entry</div>
+        <div class="sname" id="sidebarState">—</div>
+        <div class="sgroup" id="sidebarSubmitter"></div>
+      </div>
+
+      <div id="navSteps">
+        <div class="nav-step active" onclick="goStep(0)" id="navStep0">
+          <div class="step-num" id="stepNum0">1</div>
+          <div class="step-label">Identification</div>
+        </div>
+        <div class="nav-step" onclick="goStep(1)" id="navStep1">
+          <div class="step-num" id="stepNum1">2</div>
+          <div class="step-label">Policy Basics</div>
+        </div>
+        <div class="nav-step" onclick="goStep(2)" id="navStep2">
+          <div class="step-num" id="stepNum2">3</div>
+          <div class="step-label">Actors & Coalition</div>
+        </div>
+        <div class="nav-step" onclick="goStep(3)" id="navStep3">
+          <div class="step-num" id="stepNum3">4</div>
+          <div class="step-label">Sources</div>
+        </div>
+        <div class="nav-step" onclick="goStep(4)" id="navStep4">
+          <div class="step-num" id="stepNum4">5</div>
+          <div class="step-label">Analysis</div>
+        </div>
+        <div class="nav-step" onclick="goStep(5)" id="navStep5">
+          <div class="step-num" id="stepNum5">↗</div>
+          <div class="step-label">Review & Submit</div>
+        </div>
+      </div>
+
+      <div class="sidebar-entries" id="sidebarEntries" style="display:none">
+        <div class="slabel">Submitted This Session</div>
+        <div id="entryChips"></div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content-area">
+
+      <!-- STEP 0: IDENTIFICATION -->
+      <div class="step-panel active" id="step0">
+        <div class="step-header">
+          <div class="step-tag">Step 01 — Group Identification</div>
+          <div class="step-title">Who Are You?</div>
+          <div class="step-desc">This information ties your policy entry to your group's assigned state. It appears on every entry you submit in this session — you won't need to re-enter it.</div>
+        </div>
+
+        <div class="field-row two">
+          <div class="field-group">
+            <label for="f-state">Assigned State <span class="req">*</span></label>
+            <select id="f-state" required>
+              <option value="">Select your state...</option>
+              <option>Alabama</option><option>Alaska</option><option>Arizona</option>
+              <option>Arkansas</option><option>California</option><option>Colorado</option>
+              <option>Connecticut</option><option>Delaware</option><option>District of Columbia</option>
+              <option>Florida</option><option>Georgia</option><option>Hawaii</option>
+              <option>Idaho</option><option>Illinois</option><option>Indiana</option>
+              <option>Iowa</option><option>Kansas</option><option>Kentucky</option>
+              <option>Louisiana</option><option>Maine</option><option>Maryland</option>
+              <option>Massachusetts</option><option>Michigan</option><option>Minnesota</option>
+              <option>Mississippi</option><option>Missouri</option><option>Montana</option>
+              <option>Nebraska</option><option>Nevada</option><option>New Hampshire</option>
+              <option>New Jersey</option><option>New Mexico</option><option>New York</option>
+              <option>North Carolina</option><option>North Dakota</option><option>Ohio</option>
+              <option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option>
+              <option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option>
+              <option>Tennessee</option><option>Texas</option><option>Utah</option>
+              <option>Vermont</option><option>Virginia</option><option>Washington</option>
+              <option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="f-submitter">Your Name <span class="req">*</span>
+              <span class="hint">The group member filling out this specific entry</span>
+            </label>
+            <input type="text" id="f-submitter" placeholder="First and last name">
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" onclick="nextStep(0)">Continue to Policy Basics →</button>
+        </div>
+      </div>
+
+      <!-- STEP 1: POLICY BASICS -->
+      <div class="step-panel" id="step1">
+        <div class="step-header">
+          <div class="step-tag">Step 02 — Policy Basics</div>
+          <div class="step-title">What Is This Policy?</div>
+          <div class="step-desc">Core identifying information for this policy entry. Be precise with names — entries will be cross-referenced across states in the final database.</div>
+        </div>
+
+        <div class="field-group">
+          <label for="f-name">Policy or Campaign Name <span class="req">*</span>
+            <span class="hint">Use the official name if there is one (e.g. "Fight for $15 Campaign", "AB 5 — Worker Status: Employees and Independent Contractors")</span>
+          </label>
+          <input type="text" id="f-name" placeholder="Official policy or campaign name">
+        </div>
+
+        <div class="field-group">
+          <label for="f-desc">Description <span class="req">*</span>
+            <span class="hint">2–4 sentences. What does this policy do? Who does it affect? What problem does it address?</span>
+          </label>
+          <textarea id="f-desc" class="tall" placeholder="Describe the policy or campaign in plain language. Explain what it does, what problem it addresses, and why it matters for workers."></textarea>
+        </div>
+
+        <div class="field-row three">
+          <div class="field-group">
+            <label for="f-years">Year(s) <span class="req">*</span>
+              <span class="hint">Proposed, passed, or active</span>
+            </label>
+            <input type="text" id="f-years" placeholder="e.g. 2019, 2021–2023">
+          </div>
+          <div class="field-group">
+            <label for="f-jurisdiction">Jurisdiction Level <span class="req">*</span></label>
+            <select id="f-jurisdiction">
+              <option value="">Select...</option>
+              <option>State</option>
+              <option>County</option>
+              <option>City/Municipality</option>
+              <option>Multi-jurisdictional</option>
+              <option>Federal</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="f-status">Status <span class="req">*</span></label>
+            <select id="f-status">
+              <option value="">Select...</option>
+              <option>Passed / Enacted</option>
+              <option>Failed / Defeated</option>
+              <option>Ongoing / Active Campaign</option>
+              <option>Proposed / Pending</option>
+              <option>Repealed</option>
+              <option>Unknown</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="f-target">Target Population
+            <span class="hint">Who does this policy specifically address? Leave blank if it is universal/general.</span>
+          </label>
+          <input type="text" id="f-target" placeholder="e.g. domestic workers, formerly incarcerated people, gig workers, low-wage workers...">
+        </div>
+
+        <div class="field-group">
+          <label>Does This Policy Explicitly Name Black Workers?</label>
+          <div class="field-row two" style="margin-bottom:0">
+            <div>
+              <label style="text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;color:var(--black);font-size:.8rem;margin-bottom:.4rem">In the legislation / bill text?</label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="namedLeg" value="Yes"> <span>Yes</span></label>
+                <label class="radio-opt"><input type="radio" name="namedLeg" value="No"> <span>No</span></label>
+                <label class="radio-opt"><input type="radio" name="namedLeg" value="Unclear"> <span>Unclear</span></label>
+              </div>
+            </div>
+            <div>
+              <label style="text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif;color:var(--black);font-size:.8rem;margin-bottom:.4rem">In the public campaign / advocacy?</label>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="namedCampaign" value="Yes"> <span>Yes</span></label>
+                <label class="radio-opt"><input type="radio" name="namedCampaign" value="No"> <span>No</span></label>
+                <label class="radio-opt"><input type="radio" name="namedCampaign" value="Unclear"> <span>Unclear</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep(1)">← Back</button>
+          <button class="btn-primary" onclick="nextStep(1)">Continue to Actors →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: ACTORS -->
+      <div class="step-panel" id="step2">
+        <div class="step-header">
+          <div class="step-tag">Step 03 — Actors & Coalition</div>
+          <div class="step-title">Who Fought For It?</div>
+          <div class="step-desc">Map the political terrain around this policy. Who pushed for it, who opposed it, and who formally sponsored or organized the effort?</div>
+        </div>
+
+        <div class="field-group">
+          <label for="f-advocates">Major Advocates <span class="req">*</span>
+            <span class="hint">Organizations, unions, coalitions, legislators, or community groups who supported this policy. List each on a new line if possible.</span>
+          </label>
+          <textarea id="f-advocates" class="tall" placeholder="e.g.&#10;SEIU Local 1&#10;National Domestic Workers Alliance&#10;Rep. Maria Garcia (sponsor)&#10;Fight for $15 coalition"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="f-opponents">Major Opponents
+            <span class="hint">Organizations, industry groups, or legislators who opposed. Leave blank if unknown.</span>
+          </label>
+          <textarea id="f-opponents" placeholder="e.g.&#10;State Chamber of Commerce&#10;Restaurant Association of [State]&#10;National Federation of Independent Business"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="f-sponsors">Coalition Partners & Sponsors <span class="req">*</span>
+            <span class="hint">Who formally organized or co-sponsored the campaign? This may overlap with advocates — focus on lead organizations and bill sponsors here.</span>
+          </label>
+          <textarea id="f-sponsors" class="tall" placeholder="e.g.&#10;Primary sponsor: Sen. Angela Turner-Ford&#10;Co-sponsors: Rep. Derrick Simmons, Rep. Kabir Karriem&#10;Lead org: Mississippi Workers Center for Human Rights&#10;Partner: Southern Echo"></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep(2)">← Back</button>
+          <button class="btn-primary" onclick="nextStep(2)">Continue to Sources →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: SOURCES -->
+      <div class="step-panel" id="step3">
+        <div class="step-header">
+          <div class="step-tag">Step 04 — Sources</div>
+          <div class="step-title">Show Your Work</div>
+          <div class="step-desc">Link directly to the evidence. Future researchers — including LABWC staff — will use these links. Dead or vague links significantly reduce the value of an entry.</div>
+        </div>
+
+        <div class="field-group">
+          <label>Primary Sources <span class="req">*</span>
+            <span class="hint">Bill text, official government archives, legislative tracking pages. At least one required.</span>
+          </label>
+          <div id="primaryLinks">
+            <div class="rep-block" id="pLink0">
+              <div class="rep-title">Primary Source 1</div>
+              <div class="field-row two" style="margin-bottom:.8rem">
+                <div><label>URL <span class="req">*</span></label><input type="url" class="p-url" placeholder="https://..."></div>
+                <div><label>Description</label><input type="text" class="p-desc" placeholder="e.g. Bill text on state legislature site"></div>
+              </div>
+            </div>
+          </div>
+          <button class="add-btn" onclick="addLink('primary')">+ Add Another Primary Source</button>
+        </div>
+
+        <hr class="field-divider">
+
+        <div class="field-group">
+          <label>Secondary Sources
+            <span class="hint">News articles, press releases, advocacy org reports, op-eds. Add at least one if available.</span>
+          </label>
+          <div id="secondaryLinks">
+            <div class="rep-block" id="sLink0">
+              <div class="rep-title">Secondary Source 1</div>
+              <div class="field-row two" style="margin-bottom:.8rem">
+                <div><label>URL</label><input type="url" class="s-url" placeholder="https://..."></div>
+                <div><label>Description</label><input type="text" class="s-desc" placeholder="e.g. LA Times coverage, March 2022"></div>
+              </div>
+            </div>
+          </div>
+          <button class="add-btn" onclick="addLink('secondary')">+ Add Another Secondary Source</button>
+        </div>
+
+        <hr class="field-divider">
+
+        <div class="field-group">
+          <label for="f-hearings">Public Comment or Hearing Archive Links
+            <span class="hint">Legislative hearing recordings, public testimony archives, committee votes. Optional but valuable.</span>
+          </label>
+          <textarea id="f-hearings" placeholder="Paste links with brief descriptions, one per line.&#10;e.g. https://youtube.com/... — Senate Labor Committee hearing, Jan 2022"></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep(3)">← Back</button>
+          <button class="btn-primary" onclick="nextStep(3)">Continue to Analysis →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: ANALYSIS -->
+      <div class="step-panel" id="step4">
+        <div class="step-header">
+          <div class="step-tag">Step 05 — Analysis</div>
+          <div class="step-title">What Does It Mean?</div>
+          <div class="step-desc">This is the most important section for LABWC's strategic use of the database. Shallow notes here reduce the entry's value for movement work — be specific and analytical.</div>
+        </div>
+
+        <div class="field-group">
+          <label for="f-ripple">Ripple Effect Notes <span class="req">*</span>
+            <span class="hint">What broader influence could this policy have beyond its jurisdiction? Could it be a model for California? What precedent does it set? 2–4 sentences minimum.</span>
+          </label>
+          <textarea id="f-ripple" class="xtall" placeholder="e.g. This policy established a precedent for... If adopted in California, it could affect... The model is especially relevant because... Other states that have tried similar approaches include..."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="f-commentary">Public Commentary & Political Context
+            <span class="hint">Why was this policy supported or opposed? What arguments were made? What made it win or lose? Include notable quotes or public reactions if available.</span>
+          </label>
+          <textarea id="f-commentary" class="tall" placeholder="e.g. Business groups argued that... Supporters countered that... The governor's office stated... Opposition from [group] focused on..."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="f-nextsteps">Research Recommendations <span class="req">*</span>
+            <span class="hint">Leave a trail for the next researcher. What should they do next? Specific FOIA requests, interviews to conduct, documents to find, time periods to investigate.</span>
+          </label>
+          <textarea id="f-nextsteps" class="tall" placeholder="e.g.&#10;- A FOIA request to [agency] could surface implementation data&#10;- Connect with [org] — they were key organizers and may have internal memos&#10;- Check the [year] session records for the committee vote breakdown&#10;- Interview [type of person] to understand why the bill stalled"></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep(4)">← Back</button>
+          <button class="btn-primary" onclick="nextStep(4)">Review Entry →</button>
+        </div>
+      </div>
+
+      <!-- STEP 5: REVIEW & SUBMIT -->
+      <div class="step-panel" id="step5">
+        <div class="step-header">
+          <div class="step-tag">Step 06 — Review & Submit</div>
+          <div class="step-title">Check Your Work</div>
+          <div class="step-desc">Review your entry before submitting. Once submitted, corrections can be made in the shared Google Sheet — contact your instructor for access.</div>
+        </div>
+
+        <div id="reviewContent"></div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep(5)">← Edit</button>
+          <button class="btn-submit" id="submitBtn" onclick="submitEntry()">Submit Entry ↗</button>
+        </div>
+        <div id="submitMsg" style="margin-top:1rem;font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);display:none"></div>
+      </div>
+
+      <!-- SUCCESS -->
+      <div class="success-screen" id="successScreen">
+        <div class="success-icon">✅</div>
+        <h2>Entry Submitted</h2>
+        <div class="entry-count-badge" id="entryCountBadge">1 entry submitted this session</div>
+        <p>Your policy entry has been saved to the database. You can submit another entry for your state, or come back later to add more.</p>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+          <button class="btn-new" onclick="newEntry()">+ Submit Another Entry</button>
+        </div>
+      </div>
+
+    </div><!-- .content-area -->
+  </div><!-- .form-layout -->
+</div><!-- #formApp -->
+
+<script>
+// ── CONFIG ──
+// Replace with your Google Apps Script Web App deployment URL
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyB2MWJ1lPO_lNFx3OvywGhhbOFlEpGgjSOVAS_ZfhGrr9xQC7P_26UsGtpqCrlRc9R/exec';
+const ACCESS_CODE = 'ripple2025'; // Change each cohort
+
+let currentStep = 0;
+let sessionEntries = [];
+let primaryLinkCount = 1;
+let secondaryLinkCount = 1;
+
+// ── AUTH ──
+function checkAuth() {
+  const pw = document.getElementById('pwInput').value.trim();
+  if (pw === ACCESS_CODE) {
+    document.getElementById('authGate').style.display = 'none';
+    document.getElementById('formApp').style.display = 'block';
+  } else {
+    document.getElementById('authError').style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+}
+
+// ── NAVIGATION ──
+function goStep(n) {
+  if (n > 0 && currentStep === 0) {
+    if (!validateStep(0)) return;
+  }
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  document.getElementById('navStep' + n).classList.add('active');
+  currentStep = n;
+  updateProgress();
+  if (n === 5) buildReview();
+  window.scrollTo(0, 0);
+}
+
+function nextStep(from) {
+  if (!validateStep(from)) return;
+  markComplete(from);
+  goStep(from + 1);
+}
+
+function prevStep(from) {
+  goStep(from - 1);
+}
+
+function markComplete(step) {
+  const el = document.getElementById('navStep' + step);
+  el.classList.add('complete');
+  document.getElementById('stepNum' + step).textContent = '✓';
+}
+
+function updateProgress() {
+  const pct = (currentStep / 5) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// ── VALIDATION ──
+function validateStep(step) {
+  let ok = true;
+  const required = {
+    0: ['f-state', 'f-submitter'],
+    1: ['f-name', 'f-desc', 'f-years', 'f-jurisdiction', 'f-status'],
+    2: ['f-advocates', 'f-sponsors'],
+    3: [],
+    4: ['f-ripple', 'f-nextsteps'],
+    5: []
+  };
+  (required[step] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!el.value.trim()) {
+      el.classList.add('invalid');
+      ok = false;
+    } else {
+      el.classList.remove('invalid');
+    }
+  });
+
+  // Primary source: at least one URL
+  if (step === 3) {
+    const urls = [...document.querySelectorAll('#primaryLinks .p-url')].map(i => i.value.trim()).filter(Boolean);
+    if (!urls.length) {
+      document.querySelectorAll('#primaryLinks .p-url')[0].classList.add('invalid');
+      ok = false;
+    }
+  }
+
+  if (!ok) {
+    const msg = 'Please fill in all required fields before continuing.';
+    showStepError(step, msg);
+  }
+  return ok;
+}
+
+function showStepError(step, msg) {
+  // Simple: briefly shake the continue button
+  const btn = document.querySelector(`#step${step} .btn-primary`);
+  if (btn) {
+    btn.style.background = 'var(--red)';
+    setTimeout(() => { btn.style.background = ''; }, 1000);
+  }
+}
+
+// ── SIDEBAR UPDATES ──
+document.getElementById('f-state') && document.getElementById('f-state').addEventListener('change', function() {
+  document.getElementById('sidebarState').textContent = this.value || '—';
+});
+document.getElementById('f-submitter') && document.getElementById('f-submitter').addEventListener('input', function() {
+  document.getElementById('sidebarSubmitter').textContent = this.value || '';
+});
+
+// Actually wire up after DOM ready
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('f-state').addEventListener('change', function() {
+    document.getElementById('sidebarState').textContent = this.value || '—';
+  });
+  document.getElementById('f-submitter').addEventListener('input', function() {
+    document.getElementById('sidebarSubmitter').textContent = this.value || '';
+  });
+});
+
+// ── REPEATABLE LINKS ──
+function addLink(type) {
+  const isP = type === 'primary';
+  const container = document.getElementById(isP ? 'primaryLinks' : 'secondaryLinks');
+  const count = isP ? ++primaryLinkCount : ++secondaryLinkCount;
+  const pfx = isP ? 'p' : 's';
+  const label = isP ? 'Primary' : 'Secondary';
+  const div = document.createElement('div');
+  div.className = 'rep-block';
+  div.id = pfx + 'Link' + (count - 1);
+  div.innerHTML = `
+    <div class="rep-title">${label} Source ${count}
+      <button class="rep-remove" onclick="this.closest('.rep-block').remove()">Remove</button>
+    </div>
+    <div class="field-row two" style="margin-bottom:.8rem">
+      <div><label>URL</label><input type="url" class="${pfx}-url" placeholder="https://..."></div>
+      <div><label>Description</label><input type="text" class="${pfx}-desc" placeholder="Brief description"></div>
+    </div>`;
+  container.appendChild(div);
+}
+
+// ── REVIEW BUILD ──
+function buildReview() {
+  const namedLeg = document.querySelector('input[name="namedLeg"]:checked')?.value || '—';
+  const namedCamp = document.querySelector('input[name="namedCampaign"]:checked')?.value || '—';
+  const primarySources = [...document.querySelectorAll('#primaryLinks .p-url')].map((el,i) => {
+    const desc = document.querySelectorAll('#primaryLinks .p-desc')[i]?.value || '';
+    return el.value ? `${el.value}${desc ? ' — ' + desc : ''}` : null;
+  }).filter(Boolean);
+  const secondarySources = [...document.querySelectorAll('#secondaryLinks .s-url')].map((el,i) => {
+    const desc = document.querySelectorAll('#secondaryLinks .s-desc')[i]?.value || '';
+    return el.value ? `${el.value}${desc ? ' — ' + desc : ''}` : null;
+  }).filter(Boolean);
+
+  const rows = [
+    ['State', document.getElementById('f-state').value],
+    ['Submitted by', document.getElementById('f-submitter').value],
+    ['Policy Name', document.getElementById('f-name').value],
+    ['Description', document.getElementById('f-desc').value],
+    ['Years', document.getElementById('f-years').value],
+    ['Jurisdiction', document.getElementById('f-jurisdiction').value],
+    ['Status', document.getElementById('f-status').value],
+    ['Target Population', document.getElementById('f-target').value || '—'],
+    ['Named in Legislation', namedLeg],
+    ['Named in Campaign', namedCamp],
+    ['Advocates', document.getElementById('f-advocates').value],
+    ['Opponents', document.getElementById('f-opponents').value || '—'],
+    ['Sponsors/Coalition', document.getElementById('f-sponsors').value],
+    ['Primary Sources', primarySources.join('\n') || '—'],
+    ['Secondary Sources', secondarySources.join('\n') || '—'],
+    ['Hearing Links', document.getElementById('f-hearings').value || '—'],
+    ['Ripple Effect Notes', document.getElementById('f-ripple').value],
+    ['Public Commentary', document.getElementById('f-commentary').value || '—'],
+    ['Research Recommendations', document.getElementById('f-nextsteps').value],
+  ];
+
+  const html = `<div class="review-card">
+    <div class="rc-title">${document.getElementById('f-name').value || 'Untitled Entry'}</div>
+    ${rows.map(([k,v]) => `<div class="review-row">
+      <div class="review-key">${k}</div>
+      <div class="review-val" style="white-space:pre-wrap">${v}</div>
+    </div>`).join('')}
+  </div>`;
+  document.getElementById('reviewContent').innerHTML = html;
+}
+
+// ── SUBMIT ──
+async function submitEntry() {
+  const btn = document.getElementById('submitBtn');
+  const msg = document.getElementById('submitMsg');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  msg.style.display = 'block';
+  msg.textContent = 'Sending to database...';
+
+  const namedLeg = document.querySelector('input[name="namedLeg"]:checked')?.value || '';
+  const namedCamp = document.querySelector('input[name="namedCampaign"]:checked')?.value || '';
+  const primarySources = [...document.querySelectorAll('#primaryLinks .p-url')].map((el,i) => {
+    const desc = document.querySelectorAll('#primaryLinks .p-desc')[i]?.value || '';
+    return el.value ? `${el.value}${desc ? ' — ' + desc : ''}` : null;
+  }).filter(Boolean).join('\n');
+  const secondarySources = [...document.querySelectorAll('#secondaryLinks .s-url')].map((el,i) => {
+    const desc = document.querySelectorAll('#secondaryLinks .s-desc')[i]?.value || '';
+    return el.value ? `${el.value}${desc ? ' — ' + desc : ''}` : null;
+  }).filter(Boolean).join('\n');
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    state: document.getElementById('f-state').value,
+    submitter: document.getElementById('f-submitter').value,
+    policyName: document.getElementById('f-name').value,
+    description: document.getElementById('f-desc').value,
+    years: document.getElementById('f-years').value,
+    jurisdiction: document.getElementById('f-jurisdiction').value,
+    status: document.getElementById('f-status').value,
+    targetPopulation: document.getElementById('f-target').value,
+    namedInLegislation: namedLeg,
+    namedInCampaign: namedCamp,
+    advocates: document.getElementById('f-advocates').value,
+    opponents: document.getElementById('f-opponents').value,
+    sponsors: document.getElementById('f-sponsors').value,
+    primarySources,
+    secondarySources,
+    hearingLinks: document.getElementById('f-hearings').value,
+    rippleEffect: document.getElementById('f-ripple').value,
+    publicCommentary: document.getElementById('f-commentary').value,
+    researchRecommendations: document.getElementById('f-nextsteps').value,
+  };
+
+  try {
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    // Track in session
+    sessionEntries.push(payload.policyName);
+    updateSidebarEntries();
+
+    // Show success
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    const suc = document.getElementById('successScreen');
+    suc.style.display = 'block';
+    document.getElementById('entryCountBadge').textContent =
+      sessionEntries.length + ' entr' + (sessionEntries.length === 1 ? 'y' : 'ies') + ' submitted this session';
+
+  } catch(e) {
+    msg.textContent = '⚠ Submission failed. Please screenshot this form and email your instructor.';
+    btn.disabled = false;
+    btn.textContent = 'Try Again';
+  }
+}
+
+function updateSidebarEntries() {
+  if (!sessionEntries.length) return;
+  document.getElementById('sidebarEntries').style.display = 'block';
+  document.getElementById('entryChips').innerHTML = sessionEntries.map(name =>
+    `<div class="entry-chip" title="${name}">${name}</div>`
+  ).join('');
+}
+
+// ── NEW ENTRY ──
+function newEntry() {
+  // Reset form fields but keep state + submitter
+  const savedState = document.getElementById('f-state').value;
+  const savedSubmitter = document.getElementById('f-submitter').value;
+
+  ['f-name','f-desc','f-years','f-target','f-advocates','f-opponents',
+   'f-sponsors','f-hearings','f-ripple','f-commentary','f-nextsteps'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-jurisdiction').value = '';
+  document.getElementById('f-status').value = '';
+  document.querySelectorAll('input[name="namedLeg"], input[name="namedCampaign"]').forEach(r => r.checked = false);
+
+  // Reset link blocks
+  document.getElementById('primaryLinks').innerHTML = `<div class="rep-block" id="pLink0">
+    <div class="rep-title">Primary Source 1</div>
+    <div class="field-row two" style="margin-bottom:.8rem">
+      <div><label>URL <span class="req">*</span></label><input type="url" class="p-url" placeholder="https://..."></div>
+      <div><label>Description</label><input type="text" class="p-desc" placeholder="e.g. Bill text on state legislature site"></div>
+    </div></div>`;
+  document.getElementById('secondaryLinks').innerHTML = `<div class="rep-block" id="sLink0">
+    <div class="rep-title">Secondary Source 1</div>
+    <div class="field-row two" style="margin-bottom:.8rem">
+      <div><label>URL</label><input type="url" class="s-url" placeholder="https://..."></div>
+      <div><label>Description</label><input type="text" class="s-desc" placeholder="e.g. LA Times coverage, March 2022"></div>
+    </div></div>`;
+  primaryLinkCount = 1;
+  secondaryLinkCount = 1;
+
+  // Reset nav
+  document.querySelectorAll('.nav-step').forEach((el, i) => {
+    el.classList.remove('active', 'complete');
+    document.getElementById('stepNum' + i).textContent = (i === 5 ? '↗' : i + 1);
+  });
+
+  // Restore identity
+  document.getElementById('f-state').value = savedState;
+  document.getElementById('f-submitter').value = savedSubmitter;
+
+  // Hide success, show form
+  document.getElementById('successScreen').style.display = 'none';
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+
+  // Go to step 1 (skip identification since we kept it)
+  goStep(1);
+  document.getElementById('navStep0').classList.add('complete');
+  document.getElementById('stepNum0').textContent = '✓';
+}
+</script>
+</body>
+</html>
