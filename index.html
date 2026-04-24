@@ -560,6 +560,7 @@ header {
 <script>
 // ── CONFIG ──
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1j93_HKgM7gNFPGZOcRqb19Smmcjkg3iusW7iifY8eBQ/pub?gid=824832318&single=true&output=csv';
+const PROXY_URL = 'https://api.allorigins.win/get?url=';
 
 // Color palette — supports up to 50 states
 const PALETTE = [
@@ -662,9 +663,21 @@ async function loadData() {
   renderEcosystem();
 
   try {
-    const res = await fetch(SHEET_CSV_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
+    // Try direct fetch first (works if CORS headers are present)
+    // Fall back to allorigins proxy if blocked
+    let text;
+    try {
+      const direct = await fetch(SHEET_CSV_URL);
+      if (!direct.ok) throw new Error('direct failed');
+      text = await direct.text();
+      // Sanity check: should start with "State" or a CSV-like header
+      if (!text.trim().startsWith('State') && !text.includes(',')) throw new Error('unexpected response');
+    } catch {
+      const proxied = await fetch(PROXY_URL + encodeURIComponent(SHEET_CSV_URL));
+      if (!proxied.ok) throw new Error(`Proxy HTTP ${proxied.status}`);
+      const json = await proxied.json();
+      text = json.contents;
+    }
     const records = parseCSV(text);
 
     // Coerce numeric fields
