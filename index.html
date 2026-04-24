@@ -182,6 +182,24 @@ header {
 .gblock { background:var(--cream); padding:.8rem 1rem; }
 .gblock-label { font-size:.62rem; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); font-family:'DM Mono',monospace; margin-bottom:.6rem; }
 
+/* ── FOOTER ── */
+.site-footer {
+  background:var(--black); color:#555;
+  padding:2rem 2.5rem; margin-top:3rem;
+  border-top:1px solid #1a1a1a;
+  font-family:'DM Mono',monospace; font-size:.68rem; line-height:1.8;
+}
+.footer-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:2rem; margin-bottom:1.5rem; }
+.footer-section .ft-head { color:#888; letter-spacing:.15em; text-transform:uppercase; font-size:.62rem; margin-bottom:.6rem; }
+.footer-section p, .footer-section a { color:#555; text-decoration:none; display:block; }
+.footer-section a:hover { color:#888; }
+.footer-bottom { border-top:1px solid #1a1a1a; padding-top:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.5rem; }
+.footer-bottom .ft-note { color:#333; font-size:.62rem; }
+
+@media(max-width:900px) {
+  .footer-grid { grid-template-columns:1fr; gap:1.2rem; }
+}
+
 @media(max-width:900px) {
   header { padding:1rem 1.2rem; }
   .filter-bar { padding:.6rem 1.2rem; top:60px; }
@@ -201,8 +219,9 @@ header {
     <p>Black Labor Market Dashboard · Ripple Effect Project</p>
   </div>
   <div class="header-right">
-    <div class="live-pill"><div class="live-dot"></div>Live · Airtable</div>
+    <div class="live-pill"><div class="live-dot"></div>Live Data</div>
     <span class="record-count" id="recCount"></span>
+    <a href="form.html" class="btn" style="text-decoration:none">+ Submit Policy Entry</a>
     <button class="btn" onclick="loadData()">↻ Refresh</button>
   </div>
 </header>
@@ -460,12 +479,12 @@ function getParty(s) {
   return ELECTION_2020[s['State']] || '—';
 }
 
-function fmt(n, type='pct') {
+function fmt(n, type='plain') {
   if (n==null||n===''||isNaN(n)) return '—';
   if (type==='pct') return parseFloat(n).toFixed(1)+'%';
   if (type==='dollar') return '$'+Number(n).toLocaleString();
   if (type==='count') return Number(n).toLocaleString();
-  return n;
+  return parseFloat(n).toFixed(1);
 }
 function fmtRatio(bw, aw) {
   if (!bw||!aw) return '—';
@@ -653,7 +672,7 @@ function renderMap() {
         const bwcName = stateData['Black Worker Center Name & Contact'] || '';
         const bwcLine = hasBWC ? `✅ Black Worker Center${bwcName ? ': '+bwcName.split('\n')[0].substring(0,30) : ''}` : '❌ No Black Worker Center';
         const croLine = hasCRO ? '✅ Civil Rights Office' : '❌ No Civil Rights Office';
-        tip.innerHTML = `<strong>${state}</strong><br>${party} state<br>Black unemp (M): ${fmt(bUnemp)}<br>Min wage: ${fmt(minW,'dollar')}/hr<br>${bwcLine}<br>${croLine}`;
+        tip.innerHTML = `<strong>${state}</strong><br>${party} state<br>Black unemp (M): ${fmt(bUnemp,'pct')}<br>Min wage: ${fmt(minW,'dollar')}/hr<br>${bwcLine}<br>${croLine}`;
         tip.style.opacity='1';
         tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY-10)+'px';
       });
@@ -832,8 +851,7 @@ function renderUnemployment() {
     const gap = bm!=null&&om!=null ? '+'+( bm-om).toFixed(1)+'pp' : '';
     cards.innerHTML+=`<div class="scard">
       <div class="slabel">Black Men Unemp.</div>
-      <div class="sval" style="color:${color(idxs[i])}">${fmt(bm)}</div>
-      <div class="stag">${s['State']||'—'} ${gap?'· '+gap+' above overall':''}</div>
+      <div class="sval" style="color:${color(idxs[i])}">${fmt(bm,'pct')}</div>
     </div>`;
   });
 
@@ -1124,9 +1142,9 @@ function renderLabor() {
     const um=s['Black Unionization Rate - Men (%)'];
     const uw=s['Black Unionization Rate - Women (%)'];
     cards.innerHTML+=`<div class="scard">
-      <div class="slabel">Union Rate (Men)</div>
-      <div class="sval" style="color:${color(idxs[i])}">${fmt(um)}</div>
-      <div class="stag">${s['State']||'—'} · Women: ${fmt(uw)}</div>
+      <div class="slabel">Union Rate — Men</div>
+      <div class="sval" style="color:${color(idxs[i])}">${fmt(um,'pct')}</div>
+      <div class="stag">${s['State']||'—'} · Women: ${fmt(uw,'pct')}</div>
     </div>`;
   });
 
@@ -1163,11 +1181,11 @@ function renderLabor() {
         legend:{display:false},
         tooltip:{callbacks:{label:ctx=>{
           const d=scatterData[ctx.dataIndex];
-          return `${d.label}: ${fmt(d.x)} union · ${fmt(d.y,'dollar')}/hr min wage`;
+          return `${d.label}: ${fmt(d.x,'pct')} union · ${fmt(d.y,'dollar')}/hr min wage`;
         }}}
       },
       scales:{
-        x:{title:{display:true,text:'Black Union Rate (%)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:v=>v+'%',font:{family:'DM Mono',size:10}}},
+        x:{title:{display:true,text:'Union Rate (%)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:v=>v+'%',font:{family:'DM Mono',size:10}}},
         y:{title:{display:true,text:'Min Wage ($/hr)',font:{family:'DM Mono',size:10}},grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:v=>'$'+v,font:{family:'DM Mono',size:10}}}
       }
     }
@@ -1176,15 +1194,15 @@ function renderLabor() {
   // Labor table
   const tbl=document.getElementById('laborTable');
   tbl.innerHTML=`<thead><tr>
-    <th>State</th><th>Party</th><th>Black Union Rate (Men)</th><th>Black Union Rate (Women)</th>
+    <th>State</th><th>Party</th><th>Union Rate (Men)</th><th>Union Rate (Women)</th>
     <th>Min Wage</th><th>Black Men Wage</th><th>Black Women Wage</th>
   </tr></thead><tbody>${states.map((s,i)=>{
     const party=getParty(s);
     return `<tr>
       <td class="sc-state" style="color:${color(idxs[i])}">${s['State']||'—'}</td>
       <td><span class="sc-badge ${party==='Blue'?'sc-blue':'sc-red'}">${party}</span></td>
-      <td class="wmono">${fmt(s['Black Unionization Rate - Men (%)'])}</td>
-      <td class="wmono">${fmt(s['Black Unionization Rate - Women (%)'])}</td>
+      <td class="wmono">${fmt(s['Black Unionization Rate - Men (%)'],'pct')}</td>
+      <td class="wmono">${fmt(s['Black Unionization Rate - Women (%)'],'pct')}</td>
       <td class="wmono">${fmt(s['Minimum Wage ($)'],'dollar')}/hr</td>
       <td class="wmono">${fmt(s['Median Wage - Black Workers Men ($)'],'dollar')}</td>
       <td class="wmono">${fmt(s['Median Wage - Black Workers Women ($)'],'dollar')}</td>
@@ -1217,6 +1235,37 @@ function switchTab(name,el) {
 
 // ── INIT ──
 loadData();
+</script>
+<footer class="site-footer">
+  <div class="footer-grid">
+    <div class="footer-section">
+      <div class="ft-head">Data Source</div>
+      <p>American Community Survey (ACS) PUMS, 2024</p>
+      <p>via IPUMS USA, University of Minnesota</p>
+      <p style="margin-top:.5rem">Supplemental data from BLS, NCSL, and UnionStats.com</p>
+    </div>
+    <div class="footer-section">
+      <div class="ft-head">Methodology Notes</div>
+      <p>"Black" = Black alone, non-Hispanic</p>
+      <p>Working age = 18–64</p>
+      <p>Wage figures = full-time workers (35+ hrs/week)</p>
+      <p>Unemployment from ACS PUMS runs higher than published CPS estimates — figures are valid for cross-state comparison, not external benchmarking</p>
+    </div>
+    <div class="footer-section">
+      <div class="ft-head">About This Project</div>
+      <p>Built by students in PP 291: Labor Politics and Racial Inequality (The Color of Work) at UCLA Luskin School of Public Affairs.</p>
+      <p style="margin-top:.5rem">In partnership with the <a href="https://www.labworkcenter.org" target="_blank">LA Black Worker Center (LABWC)</a></p>
+      <a href="form.html" style="margin-top:.8rem;color:var(--gold)">→ Submit a Policy Entry</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="ft-note">Ripple Effect Project · Data updated as groups submit · Instructor: contact jhill2011@gmail.com for corrections</span>
+    <span class="ft-note" id="footerUpdated"></span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('footerUpdated').textContent = 'Last loaded: ' + new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 </script>
 </body>
 </html>
