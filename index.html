@@ -665,15 +665,17 @@ async function loadData() {
   try {
     // Try direct fetch first (works if CORS headers are present)
     // Fall back to allorigins proxy if blocked
+    // Cache-bust with timestamp so Refresh always pulls Google's latest version
+    const bust = `&cachebust=${Date.now()}`;
     let text;
     try {
-      const direct = await fetch(SHEET_CSV_URL);
+      const direct = await fetch(SHEET_CSV_URL + bust);
       if (!direct.ok) throw new Error('direct failed');
       text = await direct.text();
       // Sanity check: should start with "State" or a CSV-like header
       if (!text.trim().startsWith('State') && !text.includes(',')) throw new Error('unexpected response');
     } catch {
-      const proxied = await fetch(PROXY_URL + encodeURIComponent(SHEET_CSV_URL));
+      const proxied = await fetch(PROXY_URL + encodeURIComponent(SHEET_CSV_URL + bust));
       if (!proxied.ok) throw new Error(`Proxy HTTP ${proxied.status}`);
       const json = await proxied.json();
       text = json.contents;
@@ -688,7 +690,7 @@ async function loadData() {
       'Minimum Wage ($)',
       'Median Wage - All Workers Men ($)','Median Wage - All Workers Women ($)',
       'Median Wage - Black Workers Men ($)','Median Wage - Black Workers Women ($)',
-      'Black Unionization Rate - Men (%)','Black Unionization Rate - Women (%)',
+      'Unionization Rate - Men (%)','Unionization Rate - Women (%)',
     ];
     // Also coerce all employment count and wage rank fields
     records.forEach(r => {
@@ -706,6 +708,7 @@ async function loadData() {
     applyFilter();
     document.getElementById('loading').style.display='none';
     document.getElementById('dash').style.display='block';
+    updateRefreshStamp();
   } catch(e) {
     document.getElementById('loading').style.display='none';
     document.getElementById('dash').style.display='block';
@@ -718,6 +721,15 @@ async function loadData() {
     FILTERED = [];
     buildStatePills();
   }
+}
+
+// ── REFRESH STAMP ──
+function updateRefreshStamp() {
+  const now = new Date();
+  const stamp = now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+    + ' at ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  const el = document.getElementById('footerUpdated');
+  if (el) el.textContent = 'Last refreshed: ' + stamp;
 }
 
 // ── FILTER ──
@@ -872,7 +884,7 @@ function renderMap() {
         const minW = stateData['Minimum Wage ($)'];
         const hasBWC = stateData['Has Black Worker Center?'];
         const hasCRO = stateData['Has Civil Rights Office?'];
-        const bwcName = stateData['Black Worker Center Name & Contact'] || '';
+        const bwcName = stateData['BWC_Structured'] || '';
         const bwcLine = hasBWC ? `✅ Black Worker Center${bwcName ? ': '+bwcName.split('\n')[0].substring(0,30) : ''}` : '❌ No Black Worker Center';
         const croLine = hasCRO ? '✅ Civil Rights Office' : '❌ No Civil Rights Office';
         tip.innerHTML = `<strong>${state}</strong><br>${party} state<br>Black unemp (M): ${fmt(bUnemp,'pct')}<br>Min wage: ${fmt(minW,'dollar')}/hr<br>${bwcLine}<br>${croLine}`;
@@ -1342,8 +1354,8 @@ function renderLabor() {
   const cards=document.getElementById('unionCards');
   cards.innerHTML='';
   states.forEach((s,i)=>{
-    const um=s['Black Unionization Rate - Men (%)'];
-    const uw=s['Black Unionization Rate - Women (%)'];
+    const um=s['Unionization Rate - Men (%)'];
+    const uw=s['Unionization Rate - Women (%)'];
     cards.innerHTML+=`<div class="scard">
       <div class="slabel">Union Rate — Men</div>
       <div class="sval" style="color:${color(idxs[i])}">${fmt(um,'pct')}</div>
@@ -1355,15 +1367,15 @@ function renderLabor() {
   killChart('union');
   const ctx1=document.getElementById('unionChart').getContext('2d');
   CHARTS['union']=new Chart(ctx1,{type:'bar',data:{labels,datasets:[
-    {label:'Men',data:states.map(s=>s['Black Unionization Rate - Men (%)']),backgroundColor:idxs.map(i=>color(i,0.9)),borderWidth:0},
-    {label:'Women',data:states.map(s=>s['Black Unionization Rate - Women (%)']),backgroundColor:idxs.map(i=>color(i,0.4)),borderWidth:0},
+    {label:'Men',data:states.map(s=>s['Unionization Rate - Men (%)']),backgroundColor:idxs.map(i=>color(i,0.9)),borderWidth:0},
+    {label:'Women',data:states.map(s=>s['Unionization Rate - Women (%)']),backgroundColor:idxs.map(i=>color(i,0.4)),borderWidth:0},
   ]},options:stdOpts({ySuffix:'%'})});
 
   // Chart 2: scatter union vs min wage
   killChart('unionScatter');
   const ctx2=document.getElementById('unionWageScatter').getContext('2d');
   const scatterData=states.map((s,i)=>({
-    x:s['Black Unionization Rate - Men (%)'],
+    x:s['Unionization Rate - Men (%)'],
     y:s['Minimum Wage ($)'],
     label:s['State'],
     color:color(idxs[i]),
@@ -1404,8 +1416,8 @@ function renderLabor() {
     return `<tr>
       <td class="sc-state" style="color:${color(idxs[i])}">${s['State']||'—'}</td>
       <td><span class="sc-badge ${party==='Blue'?'sc-blue':'sc-red'}">${party}</span></td>
-      <td class="wmono">${fmt(s['Black Unionization Rate - Men (%)'],'pct')}</td>
-      <td class="wmono">${fmt(s['Black Unionization Rate - Women (%)'],'pct')}</td>
+      <td class="wmono">${fmt(s['Unionization Rate - Men (%)'],'pct')}</td>
+      <td class="wmono">${fmt(s['Unionization Rate - Women (%)'],'pct')}</td>
       <td class="wmono">${fmt(s['Minimum Wage ($)'],'dollar')}/hr</td>
       <td class="wmono">${fmt(s['Median Wage - Black Workers Men ($)'],'dollar')}</td>
       <td class="wmono">${fmt(s['Median Wage - Black Workers Women ($)'],'dollar')}</td>
@@ -1699,13 +1711,13 @@ loadData();
     </div>
   </div>
   <div class="footer-bottom">
-    <span class="ft-note">Ripple Effect Project · Data updated as groups submit · Instructor: contact jhill2011@gmail.com for corrections</span>
+    <span class="ft-note">Ripple Effect Project · Data updated as groups submit · Instructor: contact jhill@luskin.ucla.edu for corrections</span>
     <span class="ft-note" id="footerUpdated"></span>
   </div>
 </footer>
 
 <script>
-  document.getElementById('footerUpdated').textContent = 'Last loaded: ' + new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  // Timestamp is updated by loadData() on every refresh — see updateRefreshStamp()
 </script>
 </body>
 </html>
