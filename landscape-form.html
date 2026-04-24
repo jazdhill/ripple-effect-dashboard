@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ripple Effect — State Landscape Form</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black: #0d0d0d;
+  --white: #f4efe6;
+  --cream: #ebe5d8;
+  --red: #bf2d1a;
+  --blue: #2a4d8f;
+  --gold: #c9993a;
+  --green: #2a6044;
+  --muted: #7a7060;
+  --border: rgba(13,13,13,0.12);
+  --panel: #ffffff;
+  --input-bg: #faf8f4;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { background:var(--white); color:var(--black); font-family:'DM Sans',sans-serif; font-size:14px; min-height:100vh; }
+
+/* HEADER */
+header {
+  background:var(--black); color:var(--white);
+  padding:1.2rem 2.5rem;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:3px solid var(--gold);
+}
+.logo h1 { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:.05em; line-height:1; }
+.logo p { font-size:.65rem; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); margin-top:.2rem; font-family:'DM Mono',monospace; }
+.header-badge { font-family:'DM Mono',monospace; font-size:.65rem; letter-spacing:.1em; text-transform:uppercase; color:#555; border:1px solid #333; padding:.3rem .8rem; }
+
+/* AUTH GATE */
+#authGate {
+  min-height:calc(100vh - 70px);
+  display:flex; align-items:center; justify-content:center;
+}
+.auth-box {
+  background:var(--panel); border:1px solid var(--border);
+  padding:3rem 2.5rem; max-width:420px; width:100%;
+  text-align:center;
+}
+.auth-box .auth-icon { font-size:2rem; margin-bottom:1rem; }
+.auth-box h2 { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:.04em; margin-bottom:.4rem; }
+.auth-box p { font-size:.82rem; color:var(--muted); margin-bottom:1.8rem; line-height:1.6; }
+.auth-error { color:var(--red); font-size:.78rem; font-family:'DM Mono',monospace; margin-top:.6rem; display:none; }
+
+/* MAIN LAYOUT */
+#formApp { display:none; }
+.form-layout {
+  display:grid; grid-template-columns:240px 1fr;
+  min-height:calc(100vh - 70px);
+}
+
+/* SIDEBAR */
+.sidebar {
+  background:var(--black); color:var(--white);
+  padding:2rem 0; position:sticky; top:0; height:calc(100vh - 70px);
+  overflow-y:auto;
+}
+.sidebar-state {
+  padding:0 1.5rem 1.5rem;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  margin-bottom:.5rem;
+}
+.sidebar-state .slabel { font-size:.6rem; letter-spacing:.2em; text-transform:uppercase; color:#555; font-family:'DM Mono',monospace; margin-bottom:.3rem; }
+.sidebar-state .sname { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:.04em; color:var(--gold); }
+.sidebar-state .sgroup { font-size:.72rem; color:#555; font-family:'DM Mono',monospace; margin-top:.2rem; }
+
+.submission-type-indicator {
+  padding:.6rem 1.5rem;
+  margin-bottom:.5rem;
+}
+.sub-type-pill {
+  display:inline-block; font-size:.58rem; letter-spacing:.12em; text-transform:uppercase;
+  font-family:'DM Mono',monospace; font-weight:700; padding:.2rem .6rem;
+}
+.sub-type-pill.acs { background:var(--blue); color:white; }
+.sub-type-pill.eco { background:var(--green); color:white; }
+.sub-type-pill.both { background:var(--gold); color:var(--black); }
+
+.nav-step {
+  display:flex; align-items:center; gap:.8rem;
+  padding:.65rem 1.5rem; cursor:pointer;
+  transition:background .15s; border-left:3px solid transparent;
+  font-size:.78rem; font-weight:500; color:#555;
+}
+.nav-step:hover { background:rgba(255,255,255,.04); color:#aaa; }
+.nav-step.active { background:rgba(255,255,255,.06); color:var(--white); border-left-color:var(--gold); }
+.nav-step.complete { color:var(--green); }
+.nav-step.complete .step-num { background:var(--green); color:white; }
+.nav-step.skipped { color:#444; }
+.step-num {
+  width:22px; height:22px; border-radius:50%;
+  background:rgba(255,255,255,.08); color:#555;
+  font-family:'DM Mono',monospace; font-size:.6rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.nav-step.active .step-num { background:var(--gold); color:var(--black); }
+.step-label { font-size:.72rem; line-height:1.3; }
+.step-sublabel { font-size:.6rem; color:#444; font-family:'DM Mono',monospace; margin-top:.1rem; }
+
+.sidebar-save {
+  padding:1.2rem 1.5rem;
+  border-top:1px solid rgba(255,255,255,.08);
+  margin-top:1rem;
+}
+.save-indicator { font-size:.62rem; font-family:'DM Mono',monospace; color:#555; letter-spacing:.05em; }
+.save-indicator.saved { color:var(--green); }
+
+/* CONTENT */
+.content-area { padding:2.5rem 3rem; max-width:860px; }
+.step-panel { display:none; }
+.step-panel.active { display:block; }
+
+/* SECTION HEADER */
+.step-header { margin-bottom:2rem; }
+.step-tag { font-size:.62rem; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); font-family:'DM Mono',monospace; font-weight:600; margin-bottom:.25rem; }
+.step-title { font-family:'Bebas Neue',sans-serif; font-size:2rem; letter-spacing:.04em; margin-bottom:.4rem; }
+.step-desc { font-size:.84rem; color:var(--muted); line-height:1.6; max-width:600px; }
+
+/* FORM ELEMENTS */
+.field-group { margin-bottom:1.4rem; }
+.field-row { display:grid; gap:1rem; margin-bottom:1.4rem; }
+.field-row.two { grid-template-columns:1fr 1fr; }
+.field-row.three { grid-template-columns:1fr 1fr 1fr; }
+.field-row.four { grid-template-columns:1fr 1fr 1fr 1fr; }
+
+label {
+  display:block; font-size:.68rem; letter-spacing:.12em; text-transform:uppercase;
+  font-family:'DM Mono',monospace; color:var(--muted); font-weight:500;
+  margin-bottom:.4rem;
+}
+label .req { color:var(--red); margin-left:.2rem; }
+label .hint { display:block; font-size:.65rem; letter-spacing:.04em; text-transform:none; color:#aaa9a0; margin-top:.15rem; font-weight:400; font-style:italic; }
+
+input[type=text], input[type=url], input[type=number], input[type=password], select, textarea {
+  width:100%; padding:.7rem .9rem;
+  background:var(--input-bg); border:1.5px solid var(--border);
+  font-family:'DM Sans',sans-serif; font-size:.84rem; color:var(--black);
+  transition:border-color .15s; outline:none; appearance:none;
+}
+input[type=text]:focus, input[type=url]:focus, input[type=number]:focus,
+input[type=password]:focus, select:focus, textarea:focus {
+  border-color:var(--black); background:white;
+}
+input[type=number] { font-family:'DM Mono',monospace; }
+textarea { resize:vertical; min-height:80px; line-height:1.6; }
+
+select { cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7060' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .8rem center; padding-right:2rem; }
+
+.radio-group { display:flex; gap:1rem; flex-wrap:wrap; margin-top:.3rem; }
+.radio-opt { display:flex; align-items:center; gap:.5rem; cursor:pointer; }
+.radio-opt input { width:16px; height:16px; accent-color:var(--gold); cursor:pointer; }
+.radio-opt span { font-size:.82rem; }
+
+.field-divider { border:none; border-top:1px solid var(--border); margin:2rem 0; }
+
+/* RANK TABLE */
+.rank-table { width:100%; border-collapse:collapse; margin-top:.5rem; }
+.rank-table th {
+  font-size:.6rem; letter-spacing:.12em; text-transform:uppercase;
+  font-family:'DM Mono',monospace; color:var(--muted); font-weight:600;
+  padding:.5rem .6rem; text-align:left; border-bottom:1.5px solid var(--border);
+  background:var(--cream);
+}
+.rank-table td { padding:.4rem .4rem; vertical-align:middle; }
+.rank-table td:first-child {
+  font-family:'DM Mono',monospace; font-size:.68rem; font-weight:700;
+  color:var(--muted); width:28px; text-align:center;
+}
+.rank-table input[type=text], .rank-table input[type=number] {
+  padding:.5rem .6rem; font-size:.78rem;
+}
+.rank-section-head {
+  font-size:.62rem; letter-spacing:.16em; text-transform:uppercase;
+  font-family:'DM Mono',monospace; color:var(--muted); font-weight:700;
+  padding:.6rem 0 .3rem; margin-top:1.2rem;
+  border-bottom:1px solid var(--border);
+}
+
+/* REPEATABLE BLOCKS */
+.rep-block {
+  background:var(--cream); padding:1.2rem 1.4rem; margin-bottom:.8rem;
+  border-left:3px solid var(--border); position:relative;
+}
+.rep-block .rep-title {
+  font-size:.62rem; letter-spacing:.15em; text-transform:uppercase;
+  font-family:'DM Mono',monospace; color:var(--muted); margin-bottom:.9rem;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.rep-remove {
+  background:none; border:none; color:var(--red); cursor:pointer;
+  font-size:.68rem; font-family:'DM Mono',monospace; letter-spacing:.06em;
+  text-transform:uppercase; padding:.2rem .4rem;
+}
+.rep-remove:hover { text-decoration:underline; }
+.add-btn {
+  display:flex; align-items:center; gap:.5rem;
+  background:none; border:1.5px dashed var(--border);
+  padding:.65rem 1rem; cursor:pointer; color:var(--muted);
+  font-size:.72rem; font-family:'DM Mono',monospace; letter-spacing:.08em;
+  text-transform:uppercase; width:100%; transition:all .15s; margin-top:.5rem;
+}
+.add-btn:hover { border-color:var(--black); color:var(--black); }
+
+/* BUTTONS */
+.btn-row { display:flex; align-items:center; gap:1rem; margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--border); flex-wrap:wrap; }
+.btn-primary {
+  background:var(--black); color:var(--white); border:none; padding:.75rem 2rem;
+  font-family:'DM Mono',monospace; font-size:.72rem; letter-spacing:.12em;
+  text-transform:uppercase; cursor:pointer; transition:background .15s;
+}
+.btn-primary:hover { background:#333; }
+.btn-secondary {
+  background:transparent; color:var(--muted); border:1.5px solid var(--border); padding:.75rem 1.5rem;
+  font-family:'DM Mono',monospace; font-size:.72rem; letter-spacing:.12em;
+  text-transform:uppercase; cursor:pointer; transition:all .15s;
+}
+.btn-secondary:hover { border-color:var(--black); color:var(--black); }
+.btn-submit {
+  background:var(--green); color:white; border:none; padding:.85rem 2.5rem;
+  font-family:'DM Mono',monospace; font-size:.75rem; letter-spacing:.12em;
+  text-transform:uppercase; cursor:pointer; transition:background .15s;
+}
+.btn-submit:hover { background:#1f4d34; }
+.btn-submit:disabled { background:#aaa; cursor:not-allowed; }
+
+/* PROGRESS */
+.progress-bar { height:3px; background:var(--cream); position:sticky; top:0; z-index:100; }
+.progress-fill { height:100%; background:var(--gold); transition:width .4s ease; }
+
+/* FIELD ERROR */
+.field-error { color:var(--red); font-size:.7rem; font-family:'DM Mono',monospace; margin-top:.3rem; display:none; }
+input.invalid, select.invalid, textarea.invalid { border-color:var(--red); }
+
+/* SUBMISSION TYPE SELECTOR */
+.sub-type-cards { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin:1.5rem 0; }
+.sub-type-card {
+  border:2px solid var(--border); padding:1.2rem; cursor:pointer;
+  transition:all .15s; text-align:center;
+}
+.sub-type-card:hover { border-color:var(--muted); }
+.sub-type-card.selected { border-color:var(--gold); background:rgba(201,153,58,.06); }
+.sub-type-card .stc-icon { font-size:1.5rem; margin-bottom:.5rem; }
+.sub-type-card .stc-label { font-family:'DM Mono',monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; margin-bottom:.3rem; }
+.sub-type-card .stc-desc { font-size:.72rem; color:var(--muted); line-height:1.4; }
+
+/* EXIST CHECK BANNER */
+.exist-banner {
+  background:rgba(201,153,58,.1); border:1.5px solid var(--gold);
+  padding:.9rem 1.2rem; margin-bottom:1.5rem; display:none;
+}
+.exist-banner p { font-size:.8rem; line-height:1.5; }
+.exist-banner strong { color:#7a5a10; }
+.exist-banner .exist-actions { display:flex; gap:.8rem; margin-top:.7rem; }
+.exist-btn {
+  font-family:'DM Mono',monospace; font-size:.65rem; letter-spacing:.08em;
+  text-transform:uppercase; padding:.35rem .9rem; cursor:pointer; border:none;
+}
+.exist-btn.confirm { background:var(--gold); color:var(--black); }
+.exist-btn.cancel { background:transparent; border:1px solid var(--border); color:var(--muted); }
+
+/* REVIEW */
+.review-section { margin-bottom:1.5rem; }
+.review-section-title {
+  font-family:'DM Mono',monospace; font-size:.62rem; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border);
+  padding-bottom:.4rem; margin-bottom:.8rem;
+}
+.review-row { display:flex; gap:1rem; margin-bottom:.4rem; font-size:.8rem; }
+.review-key { font-family:'DM Mono',monospace; font-size:.67rem; color:var(--muted); min-width:200px; flex-shrink:0; }
+.review-val { color:var(--black); line-height:1.5; }
+.review-val.empty { color:#ccc; font-style:italic; }
+
+/* SUCCESS */
+.success-screen { text-align:center; padding:4rem 2rem; display:none; }
+.success-icon { font-size:3rem; margin-bottom:1.5rem; }
+.success-screen h2 { font-family:'Bebas Neue',sans-serif; font-size:2.2rem; letter-spacing:.04em; margin-bottom:.6rem; }
+.success-screen p { font-size:.88rem; color:var(--muted); line-height:1.7; max-width:480px; margin:0 auto 2rem; }
+.success-type-badge {
+  display:inline-block; font-family:'DM Mono',monospace; font-size:.7rem;
+  letter-spacing:.1em; text-transform:uppercase; padding:.4rem 1.2rem; margin-bottom:1.5rem;
+}
+
+/* NOTICE BOX */
+.notice { background:var(--cream); border-left:3px solid var(--gold); padding:.8rem 1rem; margin-bottom:1.2rem; font-size:.8rem; line-height:1.5; color:#5a4a20; }
+
+@media(max-width:900px) {
+  .form-layout { grid-template-columns:1fr; }
+  .sidebar { position:static; height:auto; display:flex; padding:1rem 0; overflow-x:auto; flex-direction:row; }
+  .sidebar-state, .sidebar-save, .submission-type-indicator { display:none; }
+  .nav-step { padding:.5rem 1rem; flex-direction:column; gap:.2rem; text-align:center; white-space:nowrap; min-width:80px; }
+  .step-sublabel { display:none; }
+  .content-area { padding:1.5rem; }
+  .field-row.two, .field-row.three, .field-row.four { grid-template-columns:1fr; }
+  .sub-type-cards { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <h1>The Color of Work</h1>
+    <p>Ripple Effect Project · State Landscape Form</p>
+  </div>
+  <div class="header-badge">Part 1 — State Landscape</div>
+</header>
+
+<!-- AUTH GATE -->
+<div id="authGate">
+  <div class="auth-box">
+    <div class="auth-icon">🗂</div>
+    <h2>State Landscape Form</h2>
+    <p>Enter your group's ACS data outputs and ecosystem research for your assigned state. Use the access code provided by your instructor.</p>
+    <input type="password" id="pwInput" placeholder="Access code" style="text-align:center;letter-spacing:.2em;font-family:'DM Mono',monospace;margin-bottom:.5rem" onkeydown="if(event.key==='Enter')checkAuth()">
+    <br>
+    <button class="btn-primary" onclick="checkAuth()" style="margin-top:.8rem;width:100%">Enter</button>
+    <div class="auth-error" id="authError">Incorrect access code. Try again.</div>
+  </div>
+</div>
+
+<!-- MAIN FORM -->
+<div id="formApp">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+  <div class="form-layout">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-state">
+        <div class="slabel">Assigned State</div>
+        <div class="sname" id="sidebarState">—</div>
+        <div class="sgroup" id="sidebarGroup"></div>
+      </div>
+      <div class="submission-type-indicator" id="subTypeIndicator" style="display:none">
+        <div class="slabel" style="color:#444;margin-bottom:.4rem">Submission type</div>
+        <span class="sub-type-pill" id="subTypePill"></span>
+      </div>
+
+      <div class="nav-step active" id="nav-0" onclick="goToStep(0)">
+        <div class="step-num">1</div>
+        <div><div class="step-label">State Identity</div><div class="step-sublabel">Who & where</div></div>
+      </div>
+      <div class="nav-step" id="nav-1" onclick="goToStep(1)">
+        <div class="step-num">2</div>
+        <div><div class="step-label">Demographics</div><div class="step-sublabel">Population composition</div></div>
+      </div>
+      <div class="nav-step" id="nav-2" onclick="goToStep(2)">
+        <div class="step-num">3</div>
+        <div><div class="step-label">Employment</div><div class="step-sublabel">Unemployment &amp; wages</div></div>
+      </div>
+      <div class="nav-step" id="nav-3" onclick="goToStep(3)">
+        <div class="step-num">4</div>
+        <div><div class="step-label">Industry</div><div class="step-sublabel">Sector rankings</div></div>
+      </div>
+      <div class="nav-step" id="nav-4" onclick="goToStep(4)">
+        <div class="step-num">5</div>
+        <div><div class="step-label">Ecosystem</div><div class="step-sublabel">Orgs, lawmakers, press</div></div>
+      </div>
+      <div class="nav-step" id="nav-5" onclick="goToStep(5)">
+        <div class="step-num">6</div>
+        <div><div class="step-label">Review &amp; Submit</div><div class="step-sublabel">Confirm &amp; send</div></div>
+      </div>
+
+      <div class="sidebar-save">
+        <div class="save-indicator" id="saveIndicator">Draft saved locally</div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content-area">
+
+      <!-- SUCCESS -->
+      <div class="success-screen" id="successScreen">
+        <div class="success-icon">✓</div>
+        <h2>Submission Received</h2>
+        <div class="success-type-badge" id="successBadge"></div>
+        <p id="successMsg">Your state landscape data has been submitted to the dashboard. If your group is splitting ACS and ecosystem work, the second submitter can now add their section using the same state name.</p>
+        <button class="btn-primary" onclick="resetForm()" style="margin-top:1rem">Submit another section</button>
+      </div>
+
+      <!-- STEP 0: STATE IDENTITY -->
+      <div class="step-panel active" id="step0">
+        <div class="step-header">
+          <div class="step-tag">Step 01</div>
+          <div class="step-title">State Identity</div>
+          <div class="step-desc">Basic identifying information for your submission. If your group is splitting ACS data and ecosystem research across two submissions, both submitters should use the exact same state name so the system can match them.</div>
+        </div>
+
+        <div class="field-row two">
+          <div>
+            <label for="f-state">Assigned State <span class="req">*</span></label>
+            <select id="f-state" onchange="onStateChange()">
+              <option value="">Select state...</option>
+              <option>Alabama</option><option>Alaska</option><option>Arizona</option>
+              <option>Arkansas</option><option>California</option><option>Colorado</option>
+              <option>Connecticut</option><option>Delaware</option><option>District of Columbia</option>
+              <option>Florida</option><option>Georgia</option><option>Hawaii</option>
+              <option>Idaho</option><option>Illinois</option><option>Indiana</option>
+              <option>Iowa</option><option>Kansas</option><option>Kentucky</option>
+              <option>Louisiana</option><option>Maine</option><option>Maryland</option>
+              <option>Massachusetts</option><option>Michigan</option><option>Minnesota</option>
+              <option>Mississippi</option><option>Missouri</option><option>Montana</option>
+              <option>Nebraska</option><option>Nevada</option><option>New Hampshire</option>
+              <option>New Jersey</option><option>New Mexico</option><option>New York</option>
+              <option>North Carolina</option><option>North Dakota</option><option>Ohio</option>
+              <option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option>
+              <option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option>
+              <option>Tennessee</option><option>Texas</option><option>Utah</option>
+              <option>Vermont</option><option>Virginia</option><option>Washington</option>
+              <option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
+            </select>
+            <div class="field-error" id="err-state">Please select your state.</div>
+          </div>
+          <div>
+            <label for="f-submitter">Your Name <span class="req">*</span>
+              <span class="hint">First and last name</span>
+            </label>
+            <input type="text" id="f-submitter" placeholder="e.g. Jordan Smith">
+            <div class="field-error" id="err-submitter">Please enter your name.</div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="f-group">Group Members
+            <span class="hint">List all group members, comma-separated</span>
+          </label>
+          <input type="text" id="f-group" placeholder="e.g. Jordan Smith, Alex Chen, Maya Patel">
+        </div>
+
+        <div class="field-group">
+          <label>What are you submitting today? <span class="req">*</span>
+            <span class="hint">If your group is splitting work, select only what you're submitting now. The other section can be submitted separately.</span>
+          </label>
+          <div class="sub-type-cards">
+            <div class="sub-type-card" id="stc-acs" onclick="selectSubType('acs')">
+              <div class="stc-icon">📊</div>
+              <div class="stc-label">ACS Data Only</div>
+              <div class="stc-desc">Demographics, employment, wages, and industry rankings from your R script output</div>
+            </div>
+            <div class="sub-type-card" id="stc-eco" onclick="selectSubType('eco')">
+              <div class="stc-icon">🏛</div>
+              <div class="stc-label">Ecosystem Only</div>
+              <div class="stc-desc">Organizations, lawmakers, press, and archive links from your research</div>
+            </div>
+            <div class="sub-type-card" id="stc-both" onclick="selectSubType('both')">
+              <div class="stc-icon">✦</div>
+              <div class="stc-label">Full Submission</div>
+              <div class="stc-desc">Both ACS data and ecosystem research in one submission</div>
+            </div>
+          </div>
+          <div class="field-error" id="err-subtype">Please select a submission type.</div>
+        </div>
+
+        <!-- Exist check banner -->
+        <div class="exist-banner" id="existBanner">
+          <p><strong>⚠ A submission for <span id="existStateName"></span> already exists.</strong><br>
+          You can add or overwrite data for this state. Only the fields you fill in will be updated — blank fields will not erase existing data.</p>
+          <div class="exist-actions">
+            <button class="exist-btn confirm" onclick="confirmOverwrite()">Continue and patch</button>
+            <button class="exist-btn cancel" onclick="dismissExistBanner()">Go back</button>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" onclick="nextStep()">Next: Demographics →</button>
+        </div>
+      </div>
+
+      <!-- STEP 1: DEMOGRAPHICS -->
+      <div class="step-panel" id="step1">
+        <div class="step-header">
+          <div class="step-tag">Step 02</div>
+          <div class="step-title">Demographics</div>
+          <div class="step-desc">Population composition from your ACS PUMS output. Enter percentages as decimals (e.g. 42.3 for 42.3%). All values from your R script.</div>
+        </div>
+
+        <div class="notice">These figures come directly from your R script output. Copy them exactly — do not round or reformat.</div>
+
+        <div class="field-row two">
+          <div>
+            <label for="f-pop">Total Population
+              <span class="hint">Full-time workers in your state (35+ hrs/week)</span>
+            </label>
+            <input type="number" id="f-pop" placeholder="e.g. 4823000" step="1">
+          </div>
+          <div>
+            <label for="f-party">Political Context
+              <span class="hint">2020 Presidential election result</span>
+            </label>
+            <select id="f-party">
+              <option value="">Select...</option>
+              <option value="Blue">Blue state (Biden)</option>
+              <option value="Red">Red state (Trump)</option>
+              <option value="Swing">Swing state</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="rank-section-head">Racial Composition (% of full-time workforce)</div>
+        <div class="field-row three" style="margin-top:.8rem">
+          <div>
+            <label for="f-pct-white">% White</label>
+            <input type="number" id="f-pct-white" placeholder="e.g. 58.4" step="0.1" min="0" max="100">
+          </div>
+          <div>
+            <label for="f-pct-black">% Black</label>
+            <input type="number" id="f-pct-black" placeholder="e.g. 12.1" step="0.1" min="0" max="100">
+          </div>
+          <div>
+            <label for="f-pct-latinx">% Latinx/e</label>
+            <input type="number" id="f-pct-latinx" placeholder="e.g. 18.7" step="0.1" min="0" max="100">
+          </div>
+        </div>
+        <div class="field-row two">
+          <div>
+            <label for="f-pct-asian">% Asian</label>
+            <input type="number" id="f-pct-asian" placeholder="e.g. 7.2" step="0.1" min="0" max="100">
+          </div>
+          <div>
+            <label for="f-pct-other">% Other</label>
+            <input type="number" id="f-pct-other" placeholder="e.g. 3.6" step="0.1" min="0" max="100">
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep()">← Back</button>
+          <button class="btn-primary" onclick="nextStep()">Next: Employment →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: EMPLOYMENT & WAGES -->
+      <div class="step-panel" id="step2">
+        <div class="step-header">
+          <div class="step-tag">Step 03</div>
+          <div class="step-title">Employment &amp; Wages</div>
+          <div class="step-desc">Unemployment rates, median wages, minimum wage, and unionization rates. All figures from your R script output unless noted.</div>
+        </div>
+
+        <div class="notice">Unemployment rates from ACS PUMS run higher than official CPS estimates — this is expected. Do not adjust them.</div>
+
+        <div class="rank-section-head">Unemployment Rates (%)</div>
+        <div class="field-row four" style="margin-top:.8rem">
+          <div>
+            <label for="f-unemp-om">Overall — Men</label>
+            <input type="number" id="f-unemp-om" placeholder="e.g. 6.2" step="0.1" min="0">
+          </div>
+          <div>
+            <label for="f-unemp-ow">Overall — Women</label>
+            <input type="number" id="f-unemp-ow" placeholder="e.g. 5.8" step="0.1" min="0">
+          </div>
+          <div>
+            <label for="f-unemp-bm">Black — Men</label>
+            <input type="number" id="f-unemp-bm" placeholder="e.g. 10.4" step="0.1" min="0">
+          </div>
+          <div>
+            <label for="f-unemp-bw">Black — Women</label>
+            <input type="number" id="f-unemp-bw" placeholder="e.g. 9.1" step="0.1" min="0">
+          </div>
+        </div>
+
+        <div class="field-divider"></div>
+        <div class="rank-section-head">Median Annual Wages ($)</div>
+        <div class="field-row four" style="margin-top:.8rem">
+          <div>
+            <label for="f-wage-am">All Workers — Men</label>
+            <input type="number" id="f-wage-am" placeholder="e.g. 62000" step="1" min="0">
+          </div>
+          <div>
+            <label for="f-wage-aw">All Workers — Women</label>
+            <input type="number" id="f-wage-aw" placeholder="e.g. 51000" step="1" min="0">
+          </div>
+          <div>
+            <label for="f-wage-bm">Black Workers — Men</label>
+            <input type="number" id="f-wage-bm" placeholder="e.g. 48000" step="1" min="0">
+          </div>
+          <div>
+            <label for="f-wage-bw">Black Workers — Women</label>
+            <input type="number" id="f-wage-bw" placeholder="e.g. 42000" step="1" min="0">
+          </div>
+        </div>
+
+        <div class="field-divider"></div>
+        <div class="field-row two">
+          <div>
+            <label for="f-minwage">State Minimum Wage ($/hr)
+              <span class="hint">Current statutory minimum. Look up if not in R output.</span>
+            </label>
+            <input type="number" id="f-minwage" placeholder="e.g. 16.00" step="0.01" min="0">
+          </div>
+          <div>
+            <label>Unionization Rates (%)
+              <span class="hint">From UnionStats.com or R output</span>
+            </label>
+            <div class="field-row two" style="margin-bottom:0">
+              <div>
+                <label for="f-union-m" style="font-size:.6rem">Men</label>
+                <input type="number" id="f-union-m" placeholder="e.g. 11.4" step="0.1" min="0">
+              </div>
+              <div>
+                <label for="f-union-w" style="font-size:.6rem">Women</label>
+                <input type="number" id="f-union-w" placeholder="e.g. 13.2" step="0.1" min="0">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep()">← Back</button>
+          <button class="btn-primary" onclick="nextStep()">Next: Industry →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: INDUSTRY -->
+      <div class="step-panel" id="step3">
+        <div class="step-header">
+          <div class="step-tag">Step 04</div>
+          <div class="step-title">Industry Rankings</div>
+          <div class="step-desc">Top industries by employment and wage, for all workers and Black workers separately. Copy directly from your R script output tables. Enter industry names exactly as they appear.</div>
+        </div>
+
+        <!-- Overall Employment -->
+        <div class="rank-section-head">Top 5 Industries by Employment — All Workers</div>
+        <table class="rank-table" style="margin-bottom:1.5rem">
+          <tr><th>#</th><th>Industry Name</th><th>Employment Count</th></tr>
+          <tr><td>1</td><td><input type="text" id="oe1-ind" placeholder="Industry name"></td><td><input type="number" id="oe1-cnt" placeholder="Count" step="1"></td></tr>
+          <tr><td>2</td><td><input type="text" id="oe2-ind" placeholder="Industry name"></td><td><input type="number" id="oe2-cnt" placeholder="Count" step="1"></td></tr>
+          <tr><td>3</td><td><input type="text" id="oe3-ind" placeholder="Industry name"></td><td><input type="number" id="oe3-cnt" placeholder="Count" step="1"></td></tr>
+          <tr><td>4</td><td><input type="text" id="oe4-ind" placeholder="Industry name"></td><td><input type="number" id="oe4-cnt" placeholder="Count" step="1"></td></tr>
+          <tr><td>5</td><td><input type="text" id="oe5-ind" placeholder="Industry name"></td><td><input type="number" id="oe5-cnt" placeholder="Count" step="1"></td></tr>
+        </table>
+
+        <!-- All Workers Highest Wage Men -->
+        <div class="field-row two" style="gap:1.5rem">
+          <div>
+            <div class="rank-section-head">Highest Paying — All Workers Men</div>
+            <table class="rank-table">
+              <tr><th>#</th><th>Industry</th><th>Median Wage ($)</th></tr>
+              <tr><td>1</td><td><input type="text" id="hwm1-ind" placeholder="Industry"></td><td><input type="number" id="hwm1-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>2</td><td><input type="text" id="hwm2-ind" placeholder="Industry"></td><td><input type="number" id="hwm2-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>3</td><td><input type="text" id="hwm3-ind" placeholder="Industry"></td><td><input type="number" id="hwm3-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>4</td><td><input type="text" id="hwm4-ind" placeholder="Industry"></td><td><input type="number" id="hwm4-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>5</td><td><input type="text" id="hwm5-ind" placeholder="Industry"></td><td><input type="number" id="hwm5-wage" placeholder="$" step="1"></td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="rank-section-head">Highest Paying — All Workers Women</div>
+            <table class="rank-table">
+              <tr><th>#</th><th>Industry</th><th>Median Wage ($)</th></tr>
+              <tr><td>1</td><td><input type="text" id="hww1-ind" placeholder="Industry"></td><td><input type="number" id="hww1-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>2</td><td><input type="text" id="hww2-ind" placeholder="Industry"></td><td><input type="number" id="hww2-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>3</td><td><input type="text" id="hww3-ind" placeholder="Industry"></td><td><input type="number" id="hww3-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>4</td><td><input type="text" id="hww4-ind" placeholder="Industry"></td><td><input type="number" id="hww4-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>5</td><td><input type="text" id="hww5-ind" placeholder="Industry"></td><td><input type="number" id="hww5-wage" placeholder="$" step="1"></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="field-divider"></div>
+
+        <!-- Black Employment -->
+        <div class="field-row two" style="gap:1.5rem">
+          <div>
+            <div class="rank-section-head">Top 5 Employers — Black Workers Men</div>
+            <table class="rank-table">
+              <tr><th>#</th><th>Industry</th><th>Count</th></tr>
+              <tr><td>1</td><td><input type="text" id="bem1-ind" placeholder="Industry"></td><td><input type="number" id="bem1-cnt" placeholder="Count" step="1"></td></tr>
+              <tr><td>2</td><td><input type="text" id="bem2-ind" placeholder="Industry"></td><td><input type="number" id="bem2-cnt" placeholder="Count" step="1"></td></tr>
+              <tr><td>3</td><td><input type="text" id="bem3-ind" placeholder="Industry"></td><td><input type="number" id="bem3-cnt" placeholder="Count" step="1"></td></tr>
+              <tr><td>4</td><td><input type="text" id="bem4-ind" placeholder="Industry"></td><td><input type="number" id="bem4-cnt" placeholder="Count" step="1"></td></tr>
+              <tr><td>5</td><td><input type="text" id="bem5-ind" placeholder="Industry"></td><td><input type="number" id="bem5-cnt" placeholder="Count" step="1"></td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="rank-section-head">Top 5 Employers — Black Workers Women</div>
+            <table class="rank-table">
+              <tr><th>#</th><th>Industry</th><th>Count</th></tr>
+              <tr><td>1</td><td><input type="text" id="bew1-ind" placeholder="Industry"></td><td><input type="number" id="bew1-cnt" placeholder="Count" step="1"></td></tr>
+              <tr><td>2</td><td><input type="text" id="bew2-ind" placeholder="Industry"></td><td><input type="number" id="bew2-cnt" placeholder="Count" step="1"></td></tr>
+              <tr><td>3</td><td><input type="text" id="bew3-ind" placeholder="Industry"></td><td><input type="number" id="bew3-cnt" placeholder="Count" step="1"></td></tr>
+              <tr><td>4</td><td><input type="text" id="bew4-ind" placeholder="Industry"></td><td><input type="number" id="bew4-cnt" placeholder="Count" step="1"></td></tr>
+              <tr><td>5</td><td><input type="text" id="bew5-ind" placeholder="Industry"></td><td><input type="number" id="bew5-cnt" placeholder="Count" step="1"></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="field-divider"></div>
+
+        <!-- Black Highest/Lowest Wage -->
+        <div class="field-row two" style="gap:1.5rem">
+          <div>
+            <div class="rank-section-head">Highest Paying — Black Workers Men</div>
+            <table class="rank-table">
+              <tr><th>#</th><th>Industry</th><th>Median Wage ($)</th></tr>
+              <tr><td>1</td><td><input type="text" id="bhwm1-ind" placeholder="Industry"></td><td><input type="number" id="bhwm1-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>2</td><td><input type="text" id="bhwm2-ind" placeholder="Industry"></td><td><input type="number" id="bhwm2-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>3</td><td><input type="text" id="bhwm3-ind" placeholder="Industry"></td><td><input type="number" id="bhwm3-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>4</td><td><input type="text" id="bhwm4-ind" placeholder="Industry"></td><td><input type="number" id="bhwm4-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>5</td><td><input type="text" id="bhwm5-ind" placeholder="Industry"></td><td><input type="number" id="bhwm5-wage" placeholder="$" step="1"></td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="rank-section-head">Highest Paying — Black Workers Women</div>
+            <table class="rank-table">
+              <tr><th>#</th><th>Industry</th><th>Median Wage ($)</th></tr>
+              <tr><td>1</td><td><input type="text" id="bhww1-ind" placeholder="Industry"></td><td><input type="number" id="bhww1-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>2</td><td><input type="text" id="bhww2-ind" placeholder="Industry"></td><td><input type="number" id="bhww2-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>3</td><td><input type="text" id="bhww3-ind" placeholder="Industry"></td><td><input type="number" id="bhww3-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>4</td><td><input type="text" id="bhww4-ind" placeholder="Industry"></td><td><input type="number" id="bhww4-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>5</td><td><input type="text" id="bhww5-ind" placeholder="Industry"></td><td><input type="number" id="bhww5-wage" placeholder="$" step="1"></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="field-row two" style="gap:1.5rem;margin-top:1rem">
+          <div>
+            <div class="rank-section-head">Lowest Paying — Black Workers Men</div>
+            <table class="rank-table">
+              <tr><th>#</th><th>Industry</th><th>Median Wage ($)</th></tr>
+              <tr><td>1</td><td><input type="text" id="blwm1-ind" placeholder="Industry"></td><td><input type="number" id="blwm1-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>2</td><td><input type="text" id="blwm2-ind" placeholder="Industry"></td><td><input type="number" id="blwm2-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>3</td><td><input type="text" id="blwm3-ind" placeholder="Industry"></td><td><input type="number" id="blwm3-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>4</td><td><input type="text" id="blwm4-ind" placeholder="Industry"></td><td><input type="number" id="blwm4-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>5</td><td><input type="text" id="blwm5-ind" placeholder="Industry"></td><td><input type="number" id="blwm5-wage" placeholder="$" step="1"></td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="rank-section-head">Lowest Paying — Black Workers Women</div>
+            <table class="rank-table">
+              <tr><th>#</th><th>Industry</th><th>Median Wage ($)</th></tr>
+              <tr><td>1</td><td><input type="text" id="blww1-ind" placeholder="Industry"></td><td><input type="number" id="blww1-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>2</td><td><input type="text" id="blww2-ind" placeholder="Industry"></td><td><input type="number" id="blww2-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>3</td><td><input type="text" id="blww3-ind" placeholder="Industry"></td><td><input type="number" id="blww3-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>4</td><td><input type="text" id="blww4-ind" placeholder="Industry"></td><td><input type="number" id="blww4-wage" placeholder="$" step="1"></td></tr>
+              <tr><td>5</td><td><input type="text" id="blww5-ind" placeholder="Industry"></td><td><input type="number" id="blww5-wage" placeholder="$" step="1"></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep()">← Back</button>
+          <button class="btn-primary" onclick="nextStep()">Next: Ecosystem →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: ECOSYSTEM -->
+      <div class="step-panel" id="step4">
+        <div class="step-header">
+          <div class="step-tag">Step 05</div>
+          <div class="step-title">Ecosystem Research</div>
+          <div class="step-desc">Organizations, lawmakers, press outlets, and public archives for your state. Add as many entries as your research surfaces. Each block becomes a structured record in the dashboard.</div>
+        </div>
+
+        <!-- BWC -->
+        <div class="field-group">
+          <label>Black Worker Center
+            <span class="hint">Does your state have a Black Worker Center or equivalent organization?</span>
+          </label>
+          <div class="radio-group" style="margin-bottom:.8rem">
+            <label class="radio-opt"><input type="radio" name="hasBWC" value="Yes"> <span>Yes</span></label>
+            <label class="radio-opt"><input type="radio" name="hasBWC" value="No"> <span>No</span></label>
+            <label class="radio-opt"><input type="radio" name="hasBWC" value="Unknown"> <span>Unknown</span></label>
+          </div>
+          <div id="bwcFields" style="display:none">
+            <div class="field-row two">
+              <div>
+                <label for="f-bwc-name">Organization Name</label>
+                <input type="text" id="f-bwc-name" placeholder="e.g. LA Black Worker Center">
+              </div>
+              <div>
+                <label for="f-bwc-url">Website URL</label>
+                <input type="url" id="f-bwc-url" placeholder="https://...">
+              </div>
+            </div>
+            <div class="field-group">
+              <label for="f-bwc-desc">Brief Description</label>
+              <textarea id="f-bwc-desc" placeholder="What does this organization do? Who does it serve?"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Civil Rights Office -->
+        <div class="field-group">
+          <label>State Civil Rights Enforcement Office
+            <span class="hint">A state agency with civil rights or labor enforcement authority</span>
+          </label>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="hasCRO" value="Yes"> <span>Yes</span></label>
+            <label class="radio-opt"><input type="radio" name="hasCRO" value="No"> <span>No</span></label>
+            <label class="radio-opt"><input type="radio" name="hasCRO" value="Unknown"> <span>Unknown</span></label>
+          </div>
+        </div>
+
+        <div class="field-divider"></div>
+
+        <!-- Notable Orgs -->
+        <div class="field-group">
+          <label>Notable Organizations
+            <span class="hint">Labor unions, advocacy groups, legal aid orgs, worker centers. Add up to 8.</span>
+          </label>
+          <div id="orgBlocks"></div>
+          <button class="add-btn" onclick="addOrg()">+ Add Organization</button>
+        </div>
+
+        <div class="field-divider"></div>
+
+        <!-- Progressive Lawmakers -->
+        <div class="field-group">
+          <label>Progressive Lawmakers
+            <span class="hint">State legislators championing Black worker or labor issues. Add up to 6.</span>
+          </label>
+          <div id="lawmakerBlocks"></div>
+          <button class="add-btn" onclick="addLawmaker()">+ Add Lawmaker</button>
+        </div>
+
+        <div class="field-divider"></div>
+
+        <!-- Press -->
+        <div class="field-group">
+          <label>Black Press &amp; Media Outlets
+            <span class="hint">Black-owned newspapers, magazines, or news sites covering labor and economic issues.</span>
+          </label>
+          <div id="blackPressBlocks"></div>
+          <button class="add-btn" onclick="addPress('blackPress', 'Black Press Outlet')">+ Add Outlet</button>
+        </div>
+
+        <div class="field-group">
+          <label>Labor Journalism Outlets
+            <span class="hint">Reporters, newsletters, or outlets covering labor specifically in your state.</span>
+          </label>
+          <div id="laborJournBlocks"></div>
+          <button class="add-btn" onclick="addPress('laborJourn', 'Labor Journalism Outlet')">+ Add Outlet</button>
+        </div>
+
+        <div class="field-group">
+          <label>Major State / Regional Newspaper
+            <span class="hint">The primary statewide paper of record.</span>
+          </label>
+          <div class="field-row two">
+            <div>
+              <label for="f-major-paper-name" style="font-size:.62rem">Publication Name</label>
+              <input type="text" id="f-major-paper-name" placeholder="e.g. Los Angeles Times">
+            </div>
+            <div>
+              <label for="f-major-paper-url" style="font-size:.62rem">URL</label>
+              <input type="url" id="f-major-paper-url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+
+        <div class="field-divider"></div>
+
+        <!-- Archives -->
+        <div class="field-row two">
+          <div>
+            <label for="f-leg-archive">State Legislative Archive URL
+              <span class="hint">Link to the state legislature's bill search or archive</span>
+            </label>
+            <input type="url" id="f-leg-archive" placeholder="https://...">
+          </div>
+          <div>
+            <label for="f-pub-comment">Public Comment / Hearing Archive URL
+              <span class="hint">Link to public hearing records or comment portals</span>
+            </label>
+            <input type="url" id="f-pub-comment" placeholder="https://...">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="f-notes">Data Gaps &amp; Submission Notes
+            <span class="hint">Anything your instructor should know — sources you couldn't find, uncertainty about values, methodological choices</span>
+          </label>
+          <textarea id="f-notes" placeholder="Optional notes..."></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep()">← Back</button>
+          <button class="btn-primary" onclick="nextStep()">Review &amp; Submit →</button>
+        </div>
+      </div>
+
+      <!-- STEP 5: REVIEW -->
+      <div class="step-panel" id="step5">
+        <div class="step-header">
+          <div class="step-tag">Step 06</div>
+          <div class="step-title">Review &amp; Submit</div>
+          <div class="step-desc">Check your entries before submitting. Use the sidebar to go back and correct anything.</div>
+        </div>
+        <div id="reviewContent"></div>
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="prevStep()">← Back</button>
+          <button class="btn-submit" id="submitBtn" onclick="submitForm()">Submit to Dashboard</button>
+          <span id="submitMsg" style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);display:none"></span>
+        </div>
+      </div>
+
+    </div><!-- content-area -->
+  </div><!-- form-layout -->
+</div><!-- formApp -->
+
+<script>
+// ── CONFIG ──
+const LANDSCAPE_URL = 'https://script.google.com/macros/s/AKfycbyB2MWJ1lPO_lNFx3OvywGhhbOFlEpGgjSOVAS_ZfhGrr9xQC7P_26UsGtpqCrlRc9R/exec';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS-GD8hb26zKwXbn4c0w-BZhWmzulH4I29qNH0a59xzno9SMIUe0yySHdij9Uz5LW9CiAWXOK5zdRQi/pub?gid=824832318&single=true&output=csv';
+const ACCESS_CODE = 'ripple2025';
+const SAVE_KEY = 'ripple_landscape_draft';
+
+// ── STATE ──
+let currentStep = 0;
+let subType = null; // 'acs' | 'eco' | 'both'
+let existingStates = new Set();
+let overwriteConfirmed = false;
+let orgCount = 0;
+let lawmakerCount = 0;
+let blackPressCount = 0;
+let laborJournCount = 0;
+
+const TOTAL_STEPS = 6;
+
+// ── AUTH ──
+function checkAuth() {
+  const val = document.getElementById('pwInput').value.trim();
+  if (val === ACCESS_CODE) {
+    document.getElementById('authGate').style.display = 'none';
+    document.getElementById('formApp').style.display = 'block';
+    loadExistingStates();
+    restoreDraft();
+  } else {
+    const err = document.getElementById('authError');
+    err.style.display = 'block';
+    err.textContent = 'Incorrect access code. Try again.';
+  }
+}
+
+// ── LOAD EXISTING STATES ──
+async function loadExistingStates() {
+  try {
+    const bust = '&cachebust=' + Date.now();
+    const r = await fetch(SHEET_CSV_URL + bust);
+    const text = await r.text();
+    const lines = text.split('\n').slice(1);
+    lines.forEach(l => {
+      const state = l.split(',')[0].replace(/"/g,'').trim();
+      if (state) existingStates.add(state);
+    });
+  } catch(e) { /* silent fail -- exist check just won't work */ }
+}
+
+// ── SUBMISSION TYPE ──
+function selectSubType(type) {
+  subType = type;
+  ['acs','eco','both'].forEach(t => document.getElementById('stc-'+t).classList.remove('selected'));
+  document.getElementById('stc-'+type).classList.add('selected');
+  document.getElementById('err-subtype').style.display = 'none';
+
+  // Show/hide ACS and ecosystem steps in sidebar
+  const acsSteps = [1,2,3]; // demographics, employment, industry
+  const ecoSteps = [4];     // ecosystem
+  acsSteps.forEach(i => {
+    document.getElementById('nav-'+i).classList.toggle('skipped', type === 'eco');
+  });
+  ecoSteps.forEach(i => {
+    document.getElementById('nav-'+i).classList.toggle('skipped', type === 'acs');
+  });
+
+  // Update sidebar indicator
+  const indicator = document.getElementById('subTypeIndicator');
+  const pill = document.getElementById('subTypePill');
+  indicator.style.display = 'block';
+  pill.className = 'sub-type-pill ' + type;
+  pill.textContent = type === 'acs' ? 'ACS Data' : type === 'eco' ? 'Ecosystem' : 'Full Submission';
+
+  saveDraft();
+}
+
+// ── BWC TOGGLE ──
+document.querySelectorAll('input[name="hasBWC"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('bwcFields').style.display = r.value === 'Yes' ? 'block' : 'none';
+  });
+});
+
+// ── STATE CHANGE ──
+function onStateChange() {
+  const state = document.getElementById('f-state').value;
+  document.getElementById('sidebarState').textContent = state || '—';
+  saveDraft();
+
+  if (state && existingStates.has(state)) {
+    document.getElementById('existStateName').textContent = state;
+    document.getElementById('existBanner').style.display = 'block';
+    overwriteConfirmed = false;
+  } else {
+    document.getElementById('existBanner').style.display = 'none';
+    overwriteConfirmed = false;
+  }
+}
+
+function confirmOverwrite() {
+  overwriteConfirmed = true;
+  document.getElementById('existBanner').style.display = 'none';
+}
+function dismissExistBanner() {
+  document.getElementById('f-state').value = '';
+  document.getElementById('sidebarState').textContent = '—';
+  document.getElementById('existBanner').style.display = 'none';
+}
+
+// ── REPEATABLE BLOCKS: ORGS ──
+function addOrg() {
+  orgCount++;
+  const n = orgCount;
+  const div = document.createElement('div');
+  div.className = 'rep-block';
+  div.id = 'org-block-' + n;
+  div.innerHTML = `
+    <div class="rep-title">
+      <span>Organization ${n}</span>
+      <button class="rep-remove" onclick="removeBlock('org-block-${n}')">Remove</button>
+    </div>
+    <div class="field-row two">
+      <div>
+        <label>Organization Name</label>
+        <input type="text" id="org${n}-name" placeholder="e.g. Los Angeles Black Worker Center">
+      </div>
+      <div>
+        <label>Type</label>
+        <select id="org${n}-type">
+          <option value="">Select type...</option>
+          <option>Worker Center</option>
+          <option>Labor Union</option>
+          <option>Advocacy Organization</option>
+          <option>Legal Aid</option>
+          <option>Research / Think Tank</option>
+          <option>Faith-Based Organization</option>
+          <option>Community Organization</option>
+          <option>Government Agency</option>
+          <option>Coalition</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row two">
+      <div>
+        <label>Website URL</label>
+        <input type="url" id="org${n}-url" placeholder="https://...">
+      </div>
+      <div>
+        <label>Brief Description</label>
+        <input type="text" id="org${n}-desc" placeholder="One sentence about what they do">
+      </div>
+    </div>
+  `;
+  document.getElementById('orgBlocks').appendChild(div);
+  saveDraft();
+}
+
+// ── REPEATABLE BLOCKS: LAWMAKERS ──
+function addLawmaker() {
+  lawmakerCount++;
+  const n = lawmakerCount;
+  const div = document.createElement('div');
+  div.className = 'rep-block';
+  div.id = 'lm-block-' + n;
+  div.innerHTML = `
+    <div class="rep-title">
+      <span>Lawmaker ${n}</span>
+      <button class="rep-remove" onclick="removeBlock('lm-block-${n}')">Remove</button>
+    </div>
+    <div class="field-row two">
+      <div>
+        <label>Name &amp; Title</label>
+        <input type="text" id="lm${n}-name" placeholder="e.g. Sen. Maria Gonzalez">
+      </div>
+      <div>
+        <label>Profile / Website URL</label>
+        <input type="url" id="lm${n}-url" placeholder="https://...">
+      </div>
+    </div>
+    <div>
+      <label>Key Bills / Focus Areas</label>
+      <input type="text" id="lm${n}-bills" placeholder="e.g. Domestic Worker Protection Act, minimum wage, paid leave">
+    </div>
+  `;
+  document.getElementById('lawmakerBlocks').appendChild(div);
+  saveDraft();
+}
+
+// ── REPEATABLE BLOCKS: PRESS ──
+function addPress(container, label) {
+  if (container === 'blackPress') blackPressCount++;
+  else laborJournCount++;
+  const n = container === 'blackPress' ? blackPressCount : laborJournCount;
+  const div = document.createElement('div');
+  div.className = 'rep-block';
+  div.id = container + '-block-' + n;
+  div.innerHTML = `
+    <div class="rep-title">
+      <span>${label} ${n}</span>
+      <button class="rep-remove" onclick="removeBlock('${container}-block-${n}')">Remove</button>
+    </div>
+    <div class="field-row two">
+      <div>
+        <label>Publication / Outlet Name</label>
+        <input type="text" id="${container}${n}-name" placeholder="e.g. The Atlanta Voice">
+      </div>
+      <div>
+        <label>URL</label>
+        <input type="url" id="${container}${n}-url" placeholder="https://...">
+      </div>
+    </div>
+  `;
+  document.getElementById(container + 'Blocks').appendChild(div);
+  saveDraft();
+}
+
+function removeBlock(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  saveDraft();
+}
+
+// ── NAVIGATION ──
+function goToStep(n) {
+  // Allow going back freely; going forward requires passing current step validation
+  if (n > currentStep) {
+    for (let i = currentStep; i < n; i++) {
+      if (!validateStep(i)) return;
+    }
+  }
+  setStep(n);
+}
+
+function nextStep() {
+  if (!validateStep(currentStep)) return;
+  const next = getNextStep(currentStep);
+  setStep(next);
+}
+
+function prevStep() {
+  const prev = getPrevStep(currentStep);
+  setStep(prev);
+}
+
+function getNextStep(from) {
+  // Skip ACS steps if eco-only, skip ecosystem if acs-only
+  let next = from + 1;
+  while (next < TOTAL_STEPS - 1) {
+    if (subType === 'eco' && [1,2,3].includes(next)) { next++; continue; }
+    if (subType === 'acs' && [4].includes(next)) { next++; continue; }
+    break;
+  }
+  return Math.min(next, TOTAL_STEPS - 1);
+}
+
+function getPrevStep(from) {
+  let prev = from - 1;
+  while (prev > 0) {
+    if (subType === 'eco' && [1,2,3].includes(prev)) { prev--; continue; }
+    if (subType === 'acs' && [4].includes(prev)) { prev--; continue; }
+    break;
+  }
+  return Math.max(prev, 0);
+}
+
+function setStep(n) {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  document.querySelectorAll('.nav-step').forEach((el, i) => {
+    el.classList.remove('active');
+    if (i < n) el.classList.add('complete');
+    else el.classList.remove('complete');
+  });
+  document.getElementById('nav-' + n).classList.add('active');
+  currentStep = n;
+  updateProgress();
+  if (n === TOTAL_STEPS - 1) buildReview();
+  window.scrollTo(0, 0);
+  saveDraft();
+}
+
+function updateProgress() {
+  const pct = (currentStep / (TOTAL_STEPS - 1)) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// ── VALIDATION ──
+function validateStep(step) {
+  if (step === 0) {
+    let ok = true;
+    const state = document.getElementById('f-state').value;
+    const submitter = document.getElementById('f-submitter').value.trim();
+
+    if (!state) {
+      document.getElementById('err-state').style.display = 'block';
+      ok = false;
+    } else {
+      document.getElementById('err-state').style.display = 'none';
+    }
+    if (!submitter) {
+      document.getElementById('err-submitter').style.display = 'block';
+      ok = false;
+    } else {
+      document.getElementById('err-submitter').style.display = 'none';
+    }
+    if (!subType) {
+      document.getElementById('err-subtype').style.display = 'block';
+      ok = false;
+    } else {
+      document.getElementById('err-subtype').style.display = 'none';
+    }
+    // If state exists and not confirmed, block
+    if (state && existingStates.has(state) && !overwriteConfirmed) {
+      document.getElementById('existStateName').textContent = state;
+      document.getElementById('existBanner').style.display = 'block';
+      ok = false;
+    }
+    return ok;
+  }
+  return true; // all other steps are optional fill-in
+}
+
+// ── REVIEW ──
+function rv(val, fallback) {
+  if (val === null || val === undefined || val === '') return `<span class="review-val empty">${fallback || '—'}</span>`;
+  return `<span class="review-val">${val}</span>`;
+}
+
+function buildReview() {
+  const state = document.getElementById('f-state').value;
+  const submitter = document.getElementById('f-submitter').value;
+  const group = document.getElementById('f-group').value;
+
+  let html = '';
+
+  // Identity
+  html += `<div class="review-section">
+    <div class="review-section-title">State Identity</div>
+    <div class="review-row"><span class="review-key">State</span>${rv(state)}</div>
+    <div class="review-row"><span class="review-key">Submitter</span>${rv(submitter)}</div>
+    <div class="review-row"><span class="review-key">Group</span>${rv(group)}</div>
+    <div class="review-row"><span class="review-key">Submission Type</span>${rv(subType === 'acs' ? 'ACS Data Only' : subType === 'eco' ? 'Ecosystem Only' : 'Full Submission')}</div>
+  </div>`;
+
+  if (subType !== 'eco') {
+    html += `<div class="review-section">
+      <div class="review-section-title">Demographics</div>
+      <div class="review-row"><span class="review-key">Total Population</span>${rv(document.getElementById('f-pop').value)}</div>
+      <div class="review-row"><span class="review-key">Political Context</span>${rv(document.getElementById('f-party').value)}</div>
+      <div class="review-row"><span class="review-key">% White / Black / Latinx</span>${rv([v('f-pct-white'),v('f-pct-black'),v('f-pct-latinx')].filter(Boolean).join(' / '))}</div>
+      <div class="review-row"><span class="review-key">% Asian / Other</span>${rv([v('f-pct-asian'),v('f-pct-other')].filter(Boolean).join(' / '))}</div>
+    </div>`;
+
+    html += `<div class="review-section">
+      <div class="review-section-title">Employment & Wages</div>
+      <div class="review-row"><span class="review-key">Unemp. Overall (M/W)</span>${rv([v('f-unemp-om'),v('f-unemp-ow')].filter(Boolean).join('% / ')+(v('f-unemp-om')||v('f-unemp-ow')?'%':''))}</div>
+      <div class="review-row"><span class="review-key">Unemp. Black (M/W)</span>${rv([v('f-unemp-bm'),v('f-unemp-bw')].filter(Boolean).join('% / ')+(v('f-unemp-bm')||v('f-unemp-bw')?'%':''))}</div>
+      <div class="review-row"><span class="review-key">Median Wage All (M/W)</span>${rv([v('f-wage-am'),v('f-wage-aw')].filter(Boolean).map(x=>'$'+x).join(' / '))}</div>
+      <div class="review-row"><span class="review-key">Median Wage Black (M/W)</span>${rv([v('f-wage-bm'),v('f-wage-bw')].filter(Boolean).map(x=>'$'+x).join(' / '))}</div>
+      <div class="review-row"><span class="review-key">Minimum Wage</span>${rv(v('f-minwage') ? '$'+v('f-minwage')+'/hr' : '')}</div>
+      <div class="review-row"><span class="review-key">Unionization (M/W)</span>${rv([v('f-union-m'),v('f-union-w')].filter(Boolean).join('% / ')+(v('f-union-m')||v('f-union-w')?'%':''))}</div>
+    </div>`;
+
+    html += `<div class="review-section">
+      <div class="review-section-title">Industry Rankings</div>
+      <div class="review-row"><span class="review-key">Top Employer #1</span>${rv(v('oe1-ind'))}</div>
+      <div class="review-row"><span class="review-key">Top Employer #2</span>${rv(v('oe2-ind'))}</div>
+      <div class="review-row"><span class="review-key">Highest Wage Men #1</span>${rv(v('hwm1-ind') ? v('hwm1-ind') + (v('hwm1-wage') ? ' — $'+v('hwm1-wage') : '') : '')}</div>
+      <div class="review-row"><span class="review-key">Highest Wage Women #1</span>${rv(v('hww1-ind') ? v('hww1-ind') + (v('hww1-wage') ? ' — $'+v('hww1-wage') : '') : '')}</div>
+      <div class="review-row"><span class="review-key">Highest Black Wage Men #1</span>${rv(v('bhwm1-ind') ? v('bhwm1-ind') + (v('bhwm1-wage') ? ' — $'+v('bhwm1-wage') : '') : '')}</div>
+      <div class="review-row"><span class="review-key">Highest Black Wage Women #1</span>${rv(v('bhww1-ind') ? v('bhww1-ind') + (v('bhww1-wage') ? ' — $'+v('bhww1-wage') : '') : '')}</div>
+    </div>`;
+  }
+
+  if (subType !== 'acs') {
+    const hasBWC = document.querySelector('input[name="hasBWC"]:checked')?.value || '—';
+    const hasCRO = document.querySelector('input[name="hasCRO"]:checked')?.value || '—';
+    const orgs = [...document.querySelectorAll('#orgBlocks .rep-block')].map(b => {
+      const n = b.id.replace('org-block-','');
+      return v('org'+n+'-name') || null;
+    }).filter(Boolean);
+    const lms = [...document.querySelectorAll('#lawmakerBlocks .rep-block')].map(b => {
+      const n = b.id.replace('lm-block-','');
+      return v('lm'+n+'-name') || null;
+    }).filter(Boolean);
+
+    html += `<div class="review-section">
+      <div class="review-section-title">Ecosystem</div>
+      <div class="review-row"><span class="review-key">Black Worker Center</span>${rv(hasBWC)}</div>
+      <div class="review-row"><span class="review-key">Civil Rights Office</span>${rv(hasCRO)}</div>
+      <div class="review-row"><span class="review-key">Organizations</span>${rv(orgs.length ? orgs.join(', ') : '')}</div>
+      <div class="review-row"><span class="review-key">Lawmakers</span>${rv(lms.length ? lms.join(', ') : '')}</div>
+      <div class="review-row"><span class="review-key">Legislative Archive</span>${rv(v('f-leg-archive'))}</div>
+      <div class="review-row"><span class="review-key">Public Comment Archive</span>${rv(v('f-pub-comment'))}</div>
+    </div>`;
+  }
+
+  document.getElementById('reviewContent').innerHTML = html;
+}
+
+function v(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+// ── STRUCTURED FORMAT BUILDERS ──
+// These produce the exact format the dashboard CSV parsers expect
+
+function buildBWCStructured() {
+  const hasBWC = document.querySelector('input[name="hasBWC"]:checked')?.value;
+  if (hasBWC !== 'Yes') return '';
+  const name = v('f-bwc-name');
+  const url = v('f-bwc-url');
+  const desc = v('f-bwc-desc');
+  // Format: Name [Type] -- desc | url
+  return [name, '[Worker Center]', desc ? '-- ' + desc : '', url ? '| ' + url : ''].filter(Boolean).join(' ');
+}
+
+function buildOrgsStructured() {
+  return [...document.querySelectorAll('#orgBlocks .rep-block')].map(b => {
+    const n = b.id.replace('org-block-','');
+    const name = v('org'+n+'-name');
+    const type = v('org'+n+'-type');
+    const desc = v('org'+n+'-desc');
+    const url = v('org'+n+'-url');
+    if (!name) return null;
+    return [name, type ? '['+type+']' : '', desc ? '-- '+desc : '', url ? '| '+url : ''].filter(Boolean).join(' ');
+  }).filter(Boolean).join('\n');
+}
+
+function buildLawmakersStructured() {
+  return [...document.querySelectorAll('#lawmakerBlocks .rep-block')].map(b => {
+    const n = b.id.replace('lm-block-','');
+    const name = v('lm'+n+'-name');
+    const url = v('lm'+n+'-url');
+    const bills = v('lm'+n+'-bills');
+    if (!name) return null;
+    // Format: Name | url\n  Bills/Focus: ...
+    let line = name + (url ? ' | '+url : '');
+    if (bills) line += '\n  Bills/Focus: ' + bills;
+    return line;
+  }).filter(Boolean).join('\n');
+}
+
+function buildPressStructured(container) {
+  const blocks = document.querySelectorAll('#' + container + 'Blocks .rep-block');
+  return [...blocks].map(b => {
+    const n = b.id.replace(container+'-block-','');
+    const name = v(container+n+'-name');
+    const url = v(container+n+'-url');
+    if (!name) return null;
+    return name + (url ? ' ' + url : '');
+  }).filter(Boolean).join('\n');
+}
+
+function buildMajorNewspaper() {
+  const name = v('f-major-paper-name');
+  const url = v('f-major-paper-url');
+  if (!name) return '';
+  return name + (url ? ' ' + url : '');
+}
+
+// ── LOCAL STORAGE DRAFT ──
+function saveDraft() {
+  try {
+    const draft = {
+      subType,
+      state: v('f-state'),
+      submitter: v('f-submitter'),
+      group: v('f-group'),
+      step: currentStep,
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(draft));
+    const el = document.getElementById('saveIndicator');
+    if (el) { el.textContent = 'Draft saved · ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); el.className = 'save-indicator saved'; }
+  } catch(e) {}
+}
+
+function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    if (draft.state) { document.getElementById('f-state').value = draft.state; onStateChange(); }
+    if (draft.submitter) document.getElementById('f-submitter').value = draft.submitter;
+    if (draft.group) document.getElementById('f-group').value = draft.group;
+    if (draft.subType) selectSubType(draft.subType);
+  } catch(e) {}
+}
+
+// ── SUBMIT ──
+async function submitForm() {
+  const btn = document.getElementById('submitBtn');
+  const msg = document.getElementById('submitMsg');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  msg.style.display = 'inline';
+  msg.textContent = 'Sending to dashboard...';
+
+  const payload = {
+    submissionType: subType,
+    state: v('f-state'),
+    submitter: v('f-submitter'),
+    group: v('f-group'),
+    overwrite: overwriteConfirmed,
+  };
+
+  // ACS fields
+  if (subType !== 'eco') {
+    Object.assign(payload, {
+      totalPopulation: v('f-pop'),
+      pctWhite: v('f-pct-white'),
+      pctBlack: v('f-pct-black'),
+      pctLatinx: v('f-pct-latinx'),
+      pctAsian: v('f-pct-asian'),
+      pctOther: v('f-pct-other'),
+      party: v('f-party'),
+      unempOverallMen: v('f-unemp-om'),
+      unempOverallWomen: v('f-unemp-ow'),
+      unempBlackMen: v('f-unemp-bm'),
+      unempBlackWomen: v('f-unemp-bw'),
+      minWage: v('f-minwage'),
+      medWageAllMen: v('f-wage-am'),
+      medWageAllWomen: v('f-wage-aw'),
+      medWageBlackMen: v('f-wage-bm'),
+      medWageBlackWomen: v('f-wage-bw'),
+      unionMen: v('f-union-m'),
+      unionWomen: v('f-union-w'),
+      // Overall employment
+      oe1Ind: v('oe1-ind'), oe1Cnt: v('oe1-cnt'),
+      oe2Ind: v('oe2-ind'), oe2Cnt: v('oe2-cnt'),
+      oe3Ind: v('oe3-ind'), oe3Cnt: v('oe3-cnt'),
+      oe4Ind: v('oe4-ind'), oe4Cnt: v('oe4-cnt'),
+      oe5Ind: v('oe5-ind'), oe5Cnt: v('oe5-cnt'),
+      // All workers highest wage men
+      hwm1Ind: v('hwm1-ind'), hwm1Wage: v('hwm1-wage'),
+      hwm2Ind: v('hwm2-ind'), hwm2Wage: v('hwm2-wage'),
+      hwm3Ind: v('hwm3-ind'), hwm3Wage: v('hwm3-wage'),
+      hwm4Ind: v('hwm4-ind'), hwm4Wage: v('hwm4-wage'),
+      hwm5Ind: v('hwm5-ind'), hwm5Wage: v('hwm5-wage'),
+      // All workers highest wage women
+      hww1Ind: v('hww1-ind'), hww1Wage: v('hww1-wage'),
+      hww2Ind: v('hww2-ind'), hww2Wage: v('hww2-wage'),
+      hww3Ind: v('hww3-ind'), hww3Wage: v('hww3-wage'),
+      hww4Ind: v('hww4-ind'), hww4Wage: v('hww4-wage'),
+      hww5Ind: v('hww5-ind'), hww5Wage: v('hww5-wage'),
+      // Black employment men
+      bem1Ind: v('bem1-ind'), bem1Cnt: v('bem1-cnt'),
+      bem2Ind: v('bem2-ind'), bem2Cnt: v('bem2-cnt'),
+      bem3Ind: v('bem3-ind'), bem3Cnt: v('bem3-cnt'),
+      bem4Ind: v('bem4-ind'), bem4Cnt: v('bem4-cnt'),
+      bem5Ind: v('bem5-ind'), bem5Cnt: v('bem5-cnt'),
+      // Black employment women
+      bew1Ind: v('bew1-ind'), bew1Cnt: v('bew1-cnt'),
+      bew2Ind: v('bew2-ind'), bew2Cnt: v('bew2-cnt'),
+      bew3Ind: v('bew3-ind'), bew3Cnt: v('bew3-cnt'),
+      bew4Ind: v('bew4-ind'), bew4Cnt: v('bew4-cnt'),
+      bew5Ind: v('bew5-ind'), bew5Cnt: v('bew5-cnt'),
+      // Black highest wage men
+      bhwm1Ind: v('bhwm1-ind'), bhwm1Wage: v('bhwm1-wage'),
+      bhwm2Ind: v('bhwm2-ind'), bhwm2Wage: v('bhwm2-wage'),
+      bhwm3Ind: v('bhwm3-ind'), bhwm3Wage: v('bhwm3-wage'),
+      bhwm4Ind: v('bhwm4-ind'), bhwm4Wage: v('bhwm4-wage'),
+      bhwm5Ind: v('bhwm5-ind'), bhwm5Wage: v('bhwm5-wage'),
+      // Black highest wage women
+      bhww1Ind: v('bhww1-ind'), bhww1Wage: v('bhww1-wage'),
+      bhww2Ind: v('bhww2-ind'), bhww2Wage: v('bhww2-wage'),
+      bhww3Ind: v('bhww3-ind'), bhww3Wage: v('bhww3-wage'),
+      bhww4Ind: v('bhww4-ind'), bhww4Wage: v('bhww4-wage'),
+      bhww5Ind: v('bhww5-ind'), bhww5Wage: v('bhww5-wage'),
+      // Black lowest wage men
+      blwm1Ind: v('blwm1-ind'), blwm1Wage: v('blwm1-wage'),
+      blwm2Ind: v('blwm2-ind'), blwm2Wage: v('blwm2-wage'),
+      blwm3Ind: v('blwm3-ind'), blwm3Wage: v('blwm3-wage'),
+      blwm4Ind: v('blwm4-ind'), blwm4Wage: v('blwm4-wage'),
+      blwm5Ind: v('blwm5-ind'), blwm5Wage: v('blwm5-wage'),
+      // Black lowest wage women
+      blww1Ind: v('blww1-ind'), blww1Wage: v('blww1-wage'),
+      blww2Ind: v('blww2-ind'), blww2Wage: v('blww2-wage'),
+      blww3Ind: v('blww3-ind'), blww3Wage: v('blww3-wage'),
+      blww4Ind: v('blww4-ind'), blww4Wage: v('blww4-wage'),
+      blww5Ind: v('blww5-ind'), blww5Wage: v('blww5-wage'),
+    });
+  }
+
+  // Ecosystem fields
+  if (subType !== 'acs') {
+    Object.assign(payload, {
+      hasBWC: document.querySelector('input[name="hasBWC"]:checked')?.value || '',
+      hasCRO: document.querySelector('input[name="hasCRO"]:checked')?.value || '',
+      bwcStructured: buildBWCStructured(),
+      notableOrgsStructured: buildOrgsStructured(),
+      lawmakersStructured: buildLawmakersStructured(),
+      blackPressStructured: buildPressStructured('blackPress'),
+      laborJournStructured: buildPressStructured('laborJourn'),
+      majorNewspaper: buildMajorNewspaper(),
+      legislativeArchive: v('f-leg-archive'),
+      publicComment: v('f-pub-comment'),
+      notes: v('f-notes'),
+    });
+  }
+
+  try {
+    await fetch(LANDSCAPE_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    // Clear draft
+    try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+
+    // Show success
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    const suc = document.getElementById('successScreen');
+    suc.style.display = 'block';
+    const badge = document.getElementById('successBadge');
+    badge.textContent = subType === 'acs' ? 'ACS Data Submitted' : subType === 'eco' ? 'Ecosystem Submitted' : 'Full Submission Complete';
+    badge.style.background = subType === 'acs' ? 'var(--blue)' : subType === 'eco' ? 'var(--green)' : 'var(--gold)';
+    badge.style.color = subType === 'both' ? 'var(--black)' : 'white';
+
+    const msgEl = document.getElementById('successMsg');
+    if (overwriteConfirmed) {
+      msgEl.textContent = 'Your data has been patched into the existing ' + v('f-state') + ' row. Only the fields you filled in were updated.';
+    } else if (subType === 'acs') {
+      msgEl.textContent = 'ACS data for ' + v('f-state') + ' has been submitted. If a teammate is submitting ecosystem research separately, they should use the same state name.';
+    } else if (subType === 'eco') {
+      msgEl.textContent = 'Ecosystem research for ' + v('f-state') + ' has been submitted and patched into the existing row.';
+    } else {
+      msgEl.textContent = 'Full landscape submission for ' + v('f-state') + ' is in the dashboard.';
+    }
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Submit to Dashboard';
+    msg.textContent = '⚠ Submission failed — check your connection and try again.';
+    msg.style.color = 'var(--red)';
+  }
+}
+
+function resetForm() {
+  document.getElementById('successScreen').style.display = 'none';
+  document.getElementById('f-state').value = '';
+  document.getElementById('f-submitter').value = '';
+  document.getElementById('f-group').value = '';
+  document.getElementById('sidebarState').textContent = '—';
+  document.getElementById('sidebarGroup').textContent = '';
+  subType = null;
+  overwriteConfirmed = false;
+  ['acs','eco','both'].forEach(t => document.getElementById('stc-'+t).classList.remove('selected'));
+  document.getElementById('subTypeIndicator').style.display = 'none';
+  document.getElementById('orgBlocks').innerHTML = '';
+  document.getElementById('lawmakerBlocks').innerHTML = '';
+  document.getElementById('blackPressBlocks').innerHTML = '';
+  document.getElementById('laborJournBlocks').innerHTML = '';
+  orgCount = 0; lawmakerCount = 0; blackPressCount = 0; laborJournCount = 0;
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitBtn').textContent = 'Submit to Dashboard';
+  document.getElementById('submitMsg').style.display = 'none';
+  setStep(0);
+}
+
+// Auto-save on any input change
+document.addEventListener('change', saveDraft);
+document.addEventListener('input', saveDraft);
+</script>
+</body>
+</html>
