@@ -289,6 +289,11 @@ header {
 .eco-expand-btn:hover { text-decoration:underline; }
 
 /* ── FOOTER ── */
+.pol-map-wrap { background:var(--cream); border:1px solid var(--border); padding:1rem 1.2rem; }
+.pol-map-label { font-size:.58rem; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); font-family:'DM Mono',monospace; font-weight:600; margin-bottom:.5rem; }
+#pol-map { width:100%; max-height:240px; display:block; }
+#pol-map circle { transition:opacity .2s; }
+
 /* ── POLICY DATABASE ── */
 .pol-filter-bar { background:var(--cream); border:1px solid var(--border); padding:1rem 1.2rem; display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-start; }
 .pol-filter-group { display:flex; flex-direction:column; gap:.35rem; }
@@ -604,6 +609,13 @@ header {
 
       <!-- HERO STATS -->
       <div class="g4 mb2" id="policyHeroCards"></div>
+
+      <!-- POLICY MAP -->
+      <div class="pol-map-wrap mb2">
+        <div class="pol-map-label">Policy entries by state — click to filter</div>
+        <svg id="pol-map" viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="polMapTooltip" class="map-tooltip" style="opacity:0;position:fixed;pointer-events:none;z-index:999"></div>
+      </div>
 
       <!-- FILTER BAR -->
       <div class="pol-filter-bar mb2">
@@ -1836,17 +1848,115 @@ function getTopics(entry) {
   return raw.split(/[,;|]/).map(t => t.trim()).filter(Boolean);
 }
 
+function renderPolicyMap() {
+  const svg = document.getElementById('pol-map');
+  if (!svg) return;
+  svg.innerHTML = '';
+
+  // Count entries per state
+  const counts = {};
+  ALL_POLICY.forEach(p => {
+    const s = p['State'];
+    if (s) counts[s] = (counts[s] || 0) + 1;
+  });
+
+  // Max count for scaling
+  const maxCount = Math.max(1, ...Object.values(counts));
+
+  Object.entries(STATE_COORDS).forEach(([state, [x, y]]) => {
+    const count = counts[state] || 0;
+    const hasEntries = count > 0;
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+    // Scale radius by entry count
+    const r = hasEntries ? 12 + (count / maxCount) * 14 : 7;
+    const idx = ALL_STATES.findIndex(s => s['State'] === state);
+    const fillColor = hasEntries ? (idx >= 0 ? color(idx) : color(Object.keys(counts).indexOf(state))) : '#d8d2c8';
+    const opacity = hasEntries ? '0.9' : '0.4';
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', x); circle.setAttribute('cy', y);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', fillColor);
+    circle.setAttribute('opacity', opacity);
+    if (hasEntries) {
+      circle.setAttribute('stroke', 'white');
+      circle.setAttribute('stroke-width', '2');
+      circle.style.cursor = 'pointer';
+    }
+    g.appendChild(circle);
+
+    // Count label
+    if (hasEntries) {
+      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      txt.setAttribute('x', x); txt.setAttribute('y', y + 1);
+      txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('dominant-baseline', 'middle');
+      txt.setAttribute('fill', 'white'); txt.setAttribute('font-size', '9');
+      txt.setAttribute('font-weight', '700');
+      txt.setAttribute('font-family', 'DM Mono, monospace');
+      txt.textContent = count;
+      txt.style.pointerEvents = 'none';
+      g.appendChild(txt);
+    }
+
+    // State abbr below circle for assigned states
+    const abbr = getStateAbbr(state);
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    lbl.setAttribute('x', x); lbl.setAttribute('y', y + r + 9);
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('fill', hasEntries ? '#333' : '#999');
+    lbl.setAttribute('font-size', '7');
+    lbl.setAttribute('font-family', 'DM Mono, monospace');
+    lbl.setAttribute('font-weight', '600');
+    lbl.textContent = abbr;
+    lbl.style.pointerEvents = 'none';
+    g.appendChild(lbl);
+
+    // Click to filter
+    if (hasEntries) {
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', () => {
+        // Toggle: if already filtered to this state, reset to all
+        if (polFilters.state === state) {
+          setPolicyFilter('state', 'all');
+        } else {
+          setPolicyFilter('state', state);
+        }
+      });
+
+      // Tooltip
+      const tip = document.getElementById('polMapTooltip');
+      g.addEventListener('mouseenter', (e) => {
+        tip.innerHTML = `<strong>${state}</strong><br>${count} polic${count === 1 ? 'y' : 'ies'} submitted<br><span style="font-size:.65rem;opacity:.7">Click to filter</span>`;
+        tip.style.opacity = '1';
+        tip.style.left = (e.clientX + 12) + 'px';
+        tip.style.top = (e.clientY - 10) + 'px';
+      });
+      g.addEventListener('mousemove', (e) => {
+        tip.style.left = (e.clientX + 12) + 'px';
+        tip.style.top = (e.clientY - 10) + 'px';
+      });
+      g.addEventListener('mouseleave', () => { tip.style.opacity = '0'; });
+    }
+
+    svg.appendChild(g);
+  });
+}
+
 function renderPolicyTab() {
   if (!ALL_POLICY.length) {
     document.getElementById('policyHeroCards').innerHTML = '';
     document.getElementById('policyCards').innerHTML = '';
     document.getElementById('policyEmpty').style.display = 'block';
     document.getElementById('policyEmpty').textContent = 'No policy entries submitted yet. Check back after Part 2 is due.';
+    renderPolicyMap(); // still render map to show assigned states
     return;
   }
 
   buildPolicyHero();
   buildPolicyFilters();
+  renderPolicyMap();
   renderPolicyCards();
 }
 
@@ -1914,6 +2024,7 @@ function setPolicyFilter(dimension, value) {
   const activeEl = document.getElementById(activeId);
   if (activeEl) activeEl.classList.add(dimension === 'ca' && value === 'yes' ? 'ca-active' : 'active');
 
+  renderPolicyMap();
   renderPolicyCards();
 }
 
@@ -1983,8 +2094,8 @@ function renderPolicyCards() {
     const yearTag = years ? `<span class="pol-tag pol-tag-status-other">${years}</span>` : '';
 
     const links = [
-      source1 ? `<a href="${source1}" target="_blank" rel="noopener">Primary Source ↗</a>` : '',
-      hearings ? `<a href="${hearings}" target="_blank" rel="noopener">Hearing ↗</a>` : '',
+      source1 && source1.startsWith('http') ? `<a href="${source1}" target="_blank" rel="noopener">Primary Source ↗</a>` : '',
+      hearings && hearings.startsWith('http') ? `<a href="${hearings}" target="_blank" rel="noopener">Hearing ↗</a>` : '',
     ].filter(Boolean).join('');
 
     const noteBlock = (rippleNote || caNote) ? `
